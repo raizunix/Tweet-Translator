@@ -1,0 +1,61 @@
+{
+  "extensionName": { "message": "Tweet Translator" },
+  "extensionDescription": {
+    "message": "Переводчик Twitter/X для Axiom Trade, GMGN и Padre."
+  },
+  "actionTitle": { "message": "Настройки Tweet Translator" },
+  "settingsSubtitle": {
+    "message": "Перевод сообщений Twitter/X в торговых терминалах."
+  },
+  "enabled": { "message": "Включить расширение" },
+  "platforms": { "message": "Платформы" },
+  "targetLanguage": { "message": "Целевой язык" },
+  "translationProvider": { "message": "Провайдер перевода" },
+  "googleFreeProvider": {
+    "message": "Google Translate — бесплатно, неофициально"
+  },
+  "proxyProvider": { "message": "Собственный backend-прокси" },
+  "proxyUrl": { "message": "URL backend-прокси" },
+  "googleNotice": {
+    "message": "Неофициальный endpoint Google работает без ключа, но Google может изменить или временно ограничить его."
+  },
+  "save": { "message": "Сохранить" },
+  "saved": { "message": "Сохранено" },
+  "translating": { "message": "Переводим…" },
+  "retry": { "message": "Повторить" },
+  "translationBadge": { "message": "Перевод" },
+  "translationFailed": { "message": "Не удалось перевести" },
+  "reloadPage": {
+    "message": "Расширение обновлено — перезагрузите страницу"
+  },
+  "serviceConnectionFailed": {
+    "message": "Не удалось связаться с сервисом перевода"
+  },
+  "googleTemporarilyUnavailable": {
+    "message": "Google Translate временно недоступен"
+  },
+  "translationTimeout": { "message": "Перевод занял слишком много времени" },
+  "proxyUrlRequired": {
+    "message": "Настройте URL безопасного backend-прокси"
+  },
+  "rateLimit": {
+    "message": "Лимит переводов исчерпан. Повторите позже"
+  },
+  "serviceUnavailable": {
+    "message": "Сервис перевода недоступен ($STATUS$)",
+    "placeholders": { "status": { "content": "$1" } }
+  },
+  "emptyTranslation": {
+    "message": "Сервис перевода вернул пустой результат"
+  },
+  "invalidTranslationText": {
+    "message": "Некорректный текст для перевода"
+  },
+  "googleRateLimit": { "message": "Google ограничил частоту запросов" },
+  "googleUnavailable": {
+    "message": "Google Translate недоступен ($STATUS$)",
+    "placeholders": { "status": { "content": "$1" } }
+  },
+  "googleEmpty": { "message": "Google вернул пустой перевод" },
+  "googleError": { "message": "Ошибка Google Translate" }
+}

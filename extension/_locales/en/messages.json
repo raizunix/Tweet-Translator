@@ -1,0 +1,59 @@
+{
+  "extensionName": { "message": "Tweet Translator" },
+  "extensionDescription": {
+    "message": "Axiom Twitter translator for X/Twitter posts in Axiom Trade, GMGN and Padre."
+  },
+  "actionTitle": { "message": "Tweet Translator settings" },
+  "settingsSubtitle": {
+    "message": "Translate Twitter/X messages in trading terminals."
+  },
+  "enabled": { "message": "Enable extension" },
+  "platforms": { "message": "Platforms" },
+  "targetLanguage": { "message": "Target language" },
+  "translationProvider": { "message": "Translation provider" },
+  "googleFreeProvider": {
+    "message": "Google Translate — free, unofficial"
+  },
+  "proxyProvider": { "message": "Custom backend proxy" },
+  "proxyUrl": { "message": "Backend proxy URL" },
+  "googleNotice": {
+    "message": "The unofficial Google endpoint works without an API key, but Google may change or temporarily limit it."
+  },
+  "save": { "message": "Save" },
+  "saved": { "message": "Saved" },
+  "translating": { "message": "Translating…" },
+  "retry": { "message": "Retry" },
+  "translationBadge": { "message": "Translation" },
+  "translationFailed": { "message": "Could not translate" },
+  "reloadPage": {
+    "message": "The extension was updated — reload the page"
+  },
+  "serviceConnectionFailed": {
+    "message": "Could not connect to the translation service"
+  },
+  "googleTemporarilyUnavailable": {
+    "message": "Google Translate is temporarily unavailable"
+  },
+  "translationTimeout": { "message": "Translation took too long" },
+  "proxyUrlRequired": {
+    "message": "Configure a secure backend proxy URL"
+  },
+  "rateLimit": {
+    "message": "Translation limit reached. Try again later"
+  },
+  "serviceUnavailable": {
+    "message": "Translation service is unavailable ($STATUS$)",
+    "placeholders": { "status": { "content": "$1" } }
+  },
+  "emptyTranslation": {
+    "message": "Translation service returned an empty result"
+  },
+  "invalidTranslationText": { "message": "Invalid text to translate" },
+  "googleRateLimit": { "message": "Google limited the request rate" },
+  "googleUnavailable": {
+    "message": "Google Translate is unavailable ($STATUS$)",
+    "placeholders": { "status": { "content": "$1" } }
+  },
+  "googleEmpty": { "message": "Google returned an empty translation" },
+  "googleError": { "message": "Google Translate error" }
+}

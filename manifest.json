@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "version": "0.1.0",
+  "default_locale": "en",
+  "description": "__MSG_extensionDescription__",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://axiom.trade/*",
+    "https://*.axiom.trade/*",
+    "https://gmgn.ai/*",
+    "https://*.gmgn.ai/*",
+    "https://trade.padre.gg/*",
+    "https://translate.googleapis.com/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*",
+        "https://gmgn.ai/*",
+        "https://*.gmgn.ai/*",
+        "https://trade.padre.gg/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": { "default_title": "__MSG_actionTitle__" }
+}
