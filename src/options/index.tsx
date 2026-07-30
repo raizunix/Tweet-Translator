@@ -10,6 +10,7 @@ const browserLanguage = globalThis.chrome?.i18n?.getUILanguage?.() || navigator.
 function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
+  const [newTerm, setNewTerm] = useState("");
   const uiLanguage = resolveInterfaceLanguage(settings.interfaceLanguage, browserLanguage);
   const message = (key: Parameters<typeof optionMessage>[1]) => optionMessage(uiLanguage, key);
 
@@ -27,6 +28,16 @@ function App() {
     await saveSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
+  };
+  const addTerm = () => {
+    const term = newTerm.trim();
+    if (
+      term &&
+      !settings.cryptoTerms.some((existing) => existing.toLowerCase() === term.toLowerCase())
+    ) {
+      update("cryptoTerms", [...settings.cryptoTerms, term]);
+    }
+    setNewTerm("");
   };
   return (
     <main>
@@ -56,7 +67,7 @@ function App() {
             <small>{message("enabledHelp")}</small>
           </span>
         </label>
-        <fieldset>
+        <fieldset className="compact-grid platforms">
           <legend>{message("platforms")}</legend>
           <label>
             <input
@@ -110,17 +121,41 @@ function App() {
           </select>
           <small>{message("targetLanguageHelp")}</small>
         </label>
-        <label>
-          {message("translationProvider")}
-          <select
-            value={settings.provider}
-            onChange={(e) => update("provider", e.target.value as Settings["provider"])}
-          >
-            <option value="google-free">{message("googleFreeProvider")}</option>
-            <option value="proxy">{message("proxyProvider")}</option>
-          </select>
-        </label>
-        {settings.provider === "proxy" && (
+        <fieldset className="service-card">
+          <legend>{message("fallbackTranslation")}</legend>
+          <div className="primary-service">
+            <span>
+              <strong>{message("googleFreeProvider")}</strong>
+              <small>{message("primaryTranslation")}</small>
+            </span>
+            <span className="status-dot">1</span>
+          </div>
+          <p className="service-help">{message("googleNotice")}</p>
+          <div className="compact-grid">
+            <label className="check-card">
+              <input
+                type="checkbox"
+                checked={settings.fallbacks.myMemory}
+                onChange={(e) =>
+                  update("fallbacks", { ...settings.fallbacks, myMemory: e.target.checked })
+                }
+              />{" "}
+              {message("myMemoryFallback")}
+            </label>
+            <label className="check-card">
+              <input
+                type="checkbox"
+                checked={settings.fallbacks.proxy}
+                onChange={(e) =>
+                  update("fallbacks", { ...settings.fallbacks, proxy: e.target.checked })
+                }
+              />{" "}
+              {message("proxyFallback")}
+            </label>
+          </div>
+          <small>{message("fallbackPrivacy")}</small>
+        </fieldset>
+        {settings.fallbacks.proxy && (
           <label>
             {message("proxyUrl")}
             <input
@@ -131,7 +166,58 @@ function App() {
             />
           </label>
         )}
-        {settings.provider === "google-free" && <p className="notice">{message("googleNotice")}</p>}
+        <details className="dictionary">
+          <summary>
+            <span>
+              <strong>{message("cryptoDictionarySummary")}</strong>
+              <small>{message("cryptoDictionaryHelp")}</small>
+            </span>
+            <span className="term-count">
+              {settings.cryptoTerms.filter((term) => term.trim()).length} {message("terms")}
+            </span>
+          </summary>
+          <div className="term-list" aria-label={message("cryptoDictionary")}>
+            {settings.cryptoTerms
+              .filter((term) => term.trim())
+              .map((term, index) => (
+                <span className="term-chip" key={`${term}-${index}`}>
+                  {term}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${term}`}
+                    onClick={() =>
+                      update(
+                        "cryptoTerms",
+                        settings.cryptoTerms.filter((_, termIndex) => termIndex !== index)
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+          </div>
+          <input
+            className="term-input"
+            value={newTerm}
+            placeholder={message("addTerm")}
+            onChange={(event) => setNewTerm(event.target.value)}
+            onBlur={addTerm}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === ",") {
+                event.preventDefault();
+                addTerm();
+              }
+            }}
+          />
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => update("cryptoTerms", [...DEFAULT_SETTINGS.cryptoTerms])}
+          >
+            {message("resetDictionary")}
+          </button>
+        </details>
         <div className="buttons">
           <button type="submit">{message("save")}</button>
           <span>{saved ? message("saved") : ""}</span>

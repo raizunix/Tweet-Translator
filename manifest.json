@@ -11,7 +11,8 @@
     "https://gmgn.ai/*",
     "https://*.gmgn.ai/*",
     "https://trade.padre.gg/*",
-    "https://translate.googleapis.com/*"
+    "https://translate.googleapis.com/*",
+    "https://api.mymemory.translated.net/*"
   ],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [

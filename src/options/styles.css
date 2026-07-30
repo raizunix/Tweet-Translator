@@ -7,9 +7,9 @@ body {
   margin: 0;
 }
 main {
-  max-width: 680px;
-  margin: 40px auto;
-  padding: 28px;
+  max-width: 720px;
+  margin: 24px auto;
+  padding: 24px;
   background: #151b24;
   border: 1px solid #283243;
   border-radius: 16px;
@@ -19,7 +19,7 @@ h1 {
 }
 form {
   display: grid;
-  gap: 18px;
+  gap: 13px;
 }
 label {
   display: grid;
@@ -29,7 +29,7 @@ label {
   grid-template-columns: 20px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 11px 13px;
   border: 1px solid #344055;
   border-radius: 10px;
   background: #111720;
@@ -54,17 +54,135 @@ small {
 }
 fieldset {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid #344055;
   border-radius: 10px;
 }
+.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.platforms {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.platforms label,
+.check-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #101721;
+  cursor: pointer;
+}
+.service-card {
+  gap: 9px;
+}
+.primary-service {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.primary-service span:first-child {
+  display: grid;
+}
+.status-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #244f3d;
+  color: #79e2ad;
+  font-size: 12px;
+}
+.service-help {
+  margin: 0;
+  color: #b3bfcd;
+  font-size: 13px;
+}
+.dictionary {
+  padding: 12px;
+  border: 1px solid #344055;
+  border-radius: 10px;
+  background: #111720;
+}
+.dictionary summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+.dictionary summary > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.dictionary[open] summary {
+  margin-bottom: 12px;
+}
+.term-count {
+  flex: none;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #263247;
+  color: #b9c8dc;
+  font-size: 12px;
+}
 input[type="url"],
+.term-input,
 select {
   padding: 9px;
   background: #0d1219;
   color: inherit;
   border: 1px solid #39465b;
   border-radius: 8px;
+}
+.term-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  max-height: 260px;
+  padding: 9px;
+  overflow: auto;
+  border: 1px solid #39465b;
+  border-radius: 8px;
+  background: #0d1219;
+}
+.term-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid #3a4961;
+  border-radius: 999px;
+  background: #202b3c;
+  color: #dbe7f7;
+  font-size: 12px;
+  line-height: 18px;
+}
+.term-chip button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #91a3ba;
+  font-size: 16px;
+  line-height: 16px;
+}
+.term-chip button:hover {
+  background: #3b4960;
+  color: white;
+}
+.term-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
 }
 .notice {
   margin: 0;
@@ -85,6 +203,20 @@ button {
   background: #3867ef;
   color: white;
   cursor: pointer;
+}
+.secondary {
+  margin-top: 10px;
+  background: #2a3443;
+}
+@media (max-width: 620px) {
+  main {
+    margin: 0;
+    border-radius: 0;
+  }
+  .compact-grid,
+  .platforms {
+    grid-template-columns: 1fr;
+  }
 }
 .buttons button + button {
   background: #2a3443;

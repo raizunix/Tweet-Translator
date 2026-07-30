@@ -17,12 +17,14 @@ test("loads the built MV3 extension", async () => {
   await expect(page.getByRole("heading", { name: "Tweet Translator" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText("extensionName");
   await expect(page.locator("body")).not.toContainText("settingsSubtitle");
-  await expect(page.locator("select")).toHaveCount(3);
+  await expect(page.locator("select")).toHaveCount(2);
 
   await context.route("https://axiom.trade/**", async (route) => {
     await route.fulfill({
       contentType: "text/html",
       body: `<!doctype html><html><body>
+        <button id="other"
+          style="position:fixed;left:40px;top:100px;width:20px;height:20px">?</button>
         <a id="trigger" href="https://x.com/user/status/123"
            style="position:fixed;left:80px;top:100px;width:20px;height:20px">X</a>
         <article id="popup" data-testid="tweet"
@@ -36,6 +38,13 @@ test("loads the built MV3 extension", async () => {
         </article>
         <script>
           const popup = document.querySelector("#popup");
+          const body = popup.querySelector("span");
+          document.querySelector("#other").addEventListener("pointerover", () => {
+            body.textContent = "A sufficiently long tooltip for an unrelated toolbar action";
+          });
+          document.querySelector("#trigger").addEventListener("pointerover", () => {
+            body.textContent = "A sufficiently long original tweet body for translation";
+          });
           popup.addEventListener("mouseout", (event) => {
             if (!popup.contains(event.relatedTarget)) popup.hidden = true;
           });
@@ -45,6 +54,9 @@ test("loads the built MV3 extension", async () => {
   });
   const terminal = await context.newPage();
   await terminal.goto("https://axiom.trade/e2e");
+  await terminal.locator("#other").hover();
+  await terminal.waitForTimeout(100);
+  await expect(terminal.locator('[data-tweet-translator="overlay"]')).toHaveCount(0);
   await terminal.locator("#trigger").hover();
   const overlay = terminal.locator('[data-tweet-translator="overlay"]');
   await expect(overlay).toBeVisible();

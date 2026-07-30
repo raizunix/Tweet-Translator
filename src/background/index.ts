@@ -11,12 +11,17 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     !message ||
     typeof message !== "object" ||
     !("type" in message) ||
-    message.type !== "TWEET_TRANSLATOR_GOOGLE_TRANSLATE" ||
+    (message.type !== "TWEET_TRANSLATOR_GOOGLE_TRANSLATE" &&
+      message.type !== "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE") ||
     !("request" in message)
   ) {
     return false;
   }
-  const request = message.request as { text?: unknown; targetLanguage?: unknown };
+  const request = message.request as {
+    text?: unknown;
+    targetLanguage?: unknown;
+    sourceLanguage?: unknown;
+  };
   if (
     typeof request.text !== "string" ||
     !request.text.trim() ||
@@ -28,6 +33,43 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
       error: i18nMessage("invalidTranslationText", "Invalid text to translate")
     });
     return false;
+  }
+  if (
+    message.type === "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE" &&
+    new TextEncoder().encode(request.text).length > 500
+  ) {
+    sendResponse({ ok: false, error: "MyMemory segments must not exceed 500 bytes" });
+    return false;
+  }
+  if (message.type === "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE") {
+    const url = new URL("https://api.mymemory.translated.net/get");
+    url.search = new URLSearchParams({
+      q: request.text,
+      langpair: `${typeof request.sourceLanguage === "string" ? request.sourceLanguage : "en"}|${request.targetLanguage}`
+    }).toString();
+    void fetch(url, { credentials: "omit" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`MyMemory is unavailable (${response.status})`);
+        const data = (await response.json()) as {
+          responseStatus?: number | string;
+          responseDetails?: string;
+          responseData?: { translatedText?: string; detectedLanguage?: string };
+        };
+        if (String(data.responseStatus ?? "200") !== "200" || !data.responseData?.translatedText)
+          throw new Error(data.responseDetails || "MyMemory returned an invalid response");
+        sendResponse({
+          ok: true,
+          text: decodeEntities(data.responseData.translatedText),
+          detectedLanguage: data.responseData.detectedLanguage
+        });
+      })
+      .catch((error: unknown) =>
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : "MyMemory translation error"
+        })
+      );
+    return true;
   }
   const url = new URL("https://translate.googleapis.com/translate_a/single");
   url.search = new URLSearchParams({
@@ -66,3 +108,14 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     );
   return true;
 });
+
+function decodeEntities(value: string): string {
+  const entities: Record<string, string> = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'"
+  };
+  return value.replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => entities[entity] ?? entity);
+}

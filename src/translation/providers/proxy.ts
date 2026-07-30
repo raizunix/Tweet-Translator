@@ -4,7 +4,11 @@ const message = (key: string, fallback: string, substitutions?: string) =>
   globalThis.chrome?.i18n?.getMessage(key, substitutions) || fallback;
 
 export class ProxyTranslationProvider implements TranslationProvider {
-  constructor(private readonly endpoint: string) {}
+  readonly id: string;
+
+  constructor(private readonly endpoint: string) {
+    this.id = `proxy:${endpoint}`;
+  }
 
   async translate(request: TranslationRequest, signal: AbortSignal): Promise<TranslationResult> {
     if (!this.endpoint)

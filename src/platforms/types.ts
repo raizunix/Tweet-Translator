@@ -15,6 +15,7 @@ export interface PopupMatch {
 
 export interface PlatformAdapter {
   readonly id: "axiom" | "gmgn" | "padre";
+  readonly detectsPopupIndependently?: boolean;
   supports(url: URL): boolean;
   findTwitterAnchor(target: Element): HTMLElement | null;
   isPopupTarget(target: Element): boolean;

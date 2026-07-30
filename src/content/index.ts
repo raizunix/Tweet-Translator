@@ -1,9 +1,9 @@
 import { adapterFor } from "../platforms/registry";
 import type { PopupMatch } from "../platforms/types";
 import type { Settings } from "../shared/settings";
-import { ProxyTranslationProvider } from "../translation/providers/proxy";
-import { GoogleFreeTranslationProvider } from "../translation/providers/google-free";
+import { createTranslationProvider } from "../translation/provider-factory";
 import { Translator } from "../translation/translator";
+import { DEFAULT_CRYPTO_TERMS } from "../translation/text-protection";
 import { TranslationOverlay } from "../ui/overlay";
 
 const message = (key: string, fallback: string) =>
@@ -19,16 +19,35 @@ async function loadContentSettings(): Promise<Settings> {
     interfaceLanguage: "auto",
     targetLanguage: "ru",
     provider: "google-free",
-    proxyUrl: ""
+    fallbacks: { myMemory: false, proxy: false },
+    proxyUrl: "",
+    cryptoTerms: DEFAULT_CRYPTO_TERMS,
+    cryptoDictionaryVersion: 2
   };
   const stored = await chrome.storage.sync.get("settings");
   const raw = stored.settings as Partial<Settings> | undefined;
   const settings: Settings = {
     ...defaults,
     ...raw,
-    platforms: { ...defaults.platforms, ...raw?.platforms }
+    platforms: { ...defaults.platforms, ...raw?.platforms },
+    fallbacks: {
+      ...defaults.fallbacks,
+      ...raw?.fallbacks,
+      ...(raw?.provider === "proxy" ? { proxy: true } : {})
+    },
+    cryptoTerms:
+      raw?.cryptoDictionaryVersion === defaults.cryptoDictionaryVersion &&
+      Array.isArray(raw?.cryptoTerms)
+        ? raw.cryptoTerms
+        : [
+            ...new Set([
+              ...defaults.cryptoTerms,
+              ...(Array.isArray(raw?.cryptoTerms) ? raw.cryptoTerms : [])
+            ])
+          ],
+    cryptoDictionaryVersion: defaults.cryptoDictionaryVersion,
+    provider: "google-free"
   };
-  if (settings.provider === "proxy" && !settings.proxyUrl) settings.provider = "google-free";
   return settings;
 }
 
@@ -43,16 +62,12 @@ void (async () => {
       : settings.interfaceLanguage;
   const adapter = adapterFor(new URL(location.href));
   if (!settings.enabled || !adapter || !settings.platforms[adapter.id]) return;
-  const provider =
-    settings.provider === "proxy"
-      ? new ProxyTranslationProvider(settings.proxyUrl)
-      : new GoogleFreeTranslationProvider();
-  const translator = new Translator(provider);
+  const provider = createTranslationProvider(settings);
+  const translator = new Translator(provider, 8_000, 0, 200, settings.cryptoTerms);
   let anchor: HTMLElement | null = null;
   let anchorUrl: string | undefined;
   let anchorCenter: { x: number; y: number } | undefined;
   let activePopup: HTMLElement | null = null;
-  let dismissedPopup: HTMLElement | null = null;
   let overlay: TranslationOverlay | null = null;
   let lifecycleFrame: number | undefined;
   let discoveryFrame: number | undefined;
@@ -87,7 +102,14 @@ void (async () => {
     if (hoverIntent) startPopupDiscovery();
   };
   const waitForPopup = (target: HTMLElement) => {
-    if (anchor === target) return;
+    // Axiom reuses the same tooltip root for neighbouring toolbar icons.
+    // A fresh pointerover on an X trigger is explicit new intent, so a root
+    // dismissed for the previous icon must be eligible again.
+    if (anchor === target) {
+      hoverIntent = true;
+      startPopupDiscovery();
+      return;
+    }
     close();
     rememberAnchor(target);
   };
@@ -185,8 +207,7 @@ void (async () => {
       const related = event.relatedTarget;
       if (
         related instanceof Node &&
-        (overlayHost.contains(related) ||
-          guardedSources.some((source) => source.contains(related)))
+        (overlayHost.contains(related) || guardedSources.some((source) => source.contains(related)))
       ) {
         return;
       }
@@ -196,8 +217,7 @@ void (async () => {
         ...new Set([...guardedSources, ...(currentAnchor ? [currentAnchor] : [])])
       ];
       exitSources.forEach((source) => {
-        const exitTarget =
-          exitTargets.get(source) ?? (source === popup ? popupContent : source);
+        const exitTarget = exitTargets.get(source) ?? (source === popup ? popupContent : source);
         exitTarget.dispatchEvent(
           new PointerEvent("pointerout", { bubbles: true, cancelable: true, relatedTarget })
         );
@@ -215,7 +235,6 @@ void (async () => {
       anchor = null;
       anchorUrl = undefined;
       anchorCenter = undefined;
-      dismissedPopup = popup;
       close();
     };
 
@@ -304,8 +323,12 @@ void (async () => {
   }
   const scan = () => {
     if (anchor && !anchor.isConnected) anchor = recoverAnchor();
-    if (dismissedPopup && !popupIsVisible(dismissedPopup)) {
-      dismissedPopup = null;
+    if (!anchor && pointerX >= 0 && pointerY >= 0) {
+      const pointed = document.elementFromPoint(pointerX, pointerY);
+      if (pointed instanceof Element) {
+        const recovered = adapter.findTwitterAnchor(pointed);
+        if (recovered) rememberAnchor(recovered);
+      }
     }
     if (
       hoverIntent &&
@@ -324,8 +347,11 @@ void (async () => {
       close();
       return;
     }
-    const match = (anchor ? adapter.findPopup(anchor) : null) ?? adapter.findOpenPopup();
-    if (match && match.popup !== dismissedPopup) {
+    const canUseOpenPopup = hoverIntent || adapter.detectsPopupIndependently;
+    const match =
+      (anchor ? adapter.findPopup(anchor) : null) ??
+      (canUseOpenPopup ? adapter.findOpenPopup() : null);
+    if (match) {
       void show(match);
     } else if (activePopup && !activePopup.isConnected) {
       close();
@@ -357,6 +383,22 @@ void (async () => {
           waitForPopup(found);
           scan();
           if (!activePopup) startPopupDiscovery();
+        } else if (
+          hoverIntent &&
+          !activePopup &&
+          !adapter.isPopupTarget(target) &&
+          !anchor?.contains(target) &&
+          target.closest("a,button,[role='button']")
+        ) {
+          // Moving directly to another toolbar action cancels the old X
+          // intent. Otherwise a recycled generic tooltip can be mistaken for
+          // the tweet popup associated with the previous icon.
+          if (discoveryFrame !== undefined) cancelAnimationFrame(discoveryFrame);
+          discoveryFrame = undefined;
+          anchor = null;
+          anchorUrl = undefined;
+          anchorCenter = undefined;
+          hoverIntent = false;
         }
       }
     },

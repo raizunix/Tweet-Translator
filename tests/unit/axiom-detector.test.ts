@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   extractTranslationTargets,
+  findAxiomTwitterPopup,
   findPopupContent,
   findPopupNear,
   findScrollContainerPath,
+  hasAxiomTwitterSignature,
   findXAnchor
 } from "../../src/platforms/axiom/detector";
 
@@ -36,6 +38,27 @@ describe("Axiom detector", () => {
     document.body.innerHTML =
       '<a href="https://x.com/search?q=token"><i class="ri-search-line"></i></a>';
     expect(findXAnchor(document.querySelector("i")!)).toBeNull();
+  });
+
+  it("recognizes the stable content signature of an Axiom Twitter card", () => {
+    const card = document.createElement("div");
+    card.textContent = "Benno @BennoOnchain Joined Jul 2021 460 followers Tweet body";
+    expect(hasAxiomTwitterSignature(card)).toBe(true);
+    card.textContent = "Search by ticker and configure filters";
+    expect(hasAxiomTwitterSignature(card)).toBe(false);
+  });
+
+  it("finds the fixed Axiom portal without generated Tailwind selectors", () => {
+    document.body.innerHTML = `
+      <div id="noise" role="tooltip" style="position:fixed;z-index:9999">Other tooltip</div>
+      <div id="twitter" style="position:fixed;z-index:9999">
+        Benno @BennoOnchain Joined Jul 2021 460 followers Tweet body
+      </div>`;
+    const noise = document.querySelector("#noise") as HTMLElement;
+    const twitter = document.querySelector("#twitter") as HTMLElement;
+    vi.spyOn(noise, "getBoundingClientRect").mockReturnValue(box(0, 0, 260, 160));
+    vi.spyOn(twitter, "getBoundingClientRect").mockReturnValue(box(20, 40, 300, 440));
+    expect(findAxiomTwitterPopup()).toBe(twitter);
   });
 
   it("extracts only the primary tweet body from an Axiom popup", () => {

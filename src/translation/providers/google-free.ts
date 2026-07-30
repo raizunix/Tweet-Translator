@@ -11,6 +11,7 @@ interface GoogleTranslateResponse {
 }
 
 export class GoogleFreeTranslationProvider implements TranslationProvider {
+  readonly id = "google-free";
   async translate(request: TranslationRequest, signal: AbortSignal): Promise<TranslationResult> {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
     const runtime = globalThis.chrome?.runtime;

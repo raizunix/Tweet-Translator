@@ -10,5 +10,6 @@ export interface TranslationResult {
 }
 
 export interface TranslationProvider {
+  readonly id?: string;
   translate(request: TranslationRequest, signal: AbortSignal): Promise<TranslationResult>;
 }
