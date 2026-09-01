@@ -17,7 +17,7 @@
 
 ```text
 src/
-  background/          запросы к бесплатному Google endpoint
+  background/          отменяемые запросы к публичным translation API
   content/             жизненный цикл popup и координация компонентов
   options/             страница настроек
   platforms/
@@ -88,11 +88,10 @@ progress = scrollTop / (scrollHeight - clientHeight)
 
 ## Перевод
 
-Цепочка провайдеров создаётся фабрикой `src/translation/provider-factory.ts`: Google всегда
-идёт первым, затем только явно включённые MyMemory и proxy. `SequentialTranslationProvider`
-не запускает гонку запросов, останавливается на `AbortError` и временно пропускает сервис
-после серии ошибок. MyMemory вызывается через background worker сегментами не более 500
-байт UTF-8.
+Провайдеры создаются фабрикой `src/translation/provider-factory.ts` из карты настроек.
+`RacingTranslationProvider` запускает их одновременно, принимает первый непустой результат,
+не совпадающий с исходным текстом, и отменяет проигравшие запросы. Circuit breaker временно
+исключает сервис после серии ошибок. MyMemory вызывается сегментами не более 500 байт UTF-8.
 
 `Translator` защищает структурные и криптографические фрагменты, дедуплицирует одновременные
 запросы и хранит успешные результаты в ограниченном LRU-кэше. Ключ включает идентификатор
@@ -106,9 +105,13 @@ progress = scrollTop / (scrollHeight - clientHeight)
 - timeout;
 - повторные попытки с небольшой задержкой.
 
-Доступны два провайдера:
+Доступны провайдеры:
 
 - `google-free` — запрос через background service worker к неофициальному Google endpoint;
+- `mymemory` — публичный MyMemory API;
+- `libretranslate` — перебор публичных LibreTranslate/Argos-инстансов;
+- `lingva` — перебор публичных Lingva-инстансов;
+- `apertium` — публичный Apertium APY для поддерживаемых языковых пар;
 - `proxy` — пользовательский HTTPS backend.
 
 Формат запроса proxy:

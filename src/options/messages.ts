@@ -15,16 +15,18 @@ const translations = {
     platforms: "Где переводить",
     targetLanguage: "Язык перевода твитов",
     targetLanguageHelp: "На этот язык переводится текст твитов.",
-    primaryTranslation: "Основной перевод",
     googleFreeProvider: "Google Translate — бесплатно",
-    googleNotice:
-      "Google используется первым. Резерв вызывается только после окончательной ошибки Google.",
-    fallbackTranslation: "Резервный перевод",
-    myMemoryFallback: "Использовать MyMemory",
+    myMemoryProvider: "MyMemory",
+    libreTranslateProvider: "LibreTranslate / Argos",
+    lingvaProvider: "Lingva Translate",
+    apertiumProvider: "Apertium",
+    translationServices: "Сервисы перевода",
+    parallelTranslationHelp:
+      "Запрос отправляется всем отмеченным сервисам одновременно. Используется первый пригодный ответ, остальные запросы отменяются.",
     proxyFallback: "Использовать собственный сервер",
     proxyUrl: "Адрес сервера перевода",
-    fallbackPrivacy:
-      "Текст видимого твита передаётся только включённым сервисам и строго по очереди. Резервные сервисы по умолчанию выключены.",
+    providerPrivacy:
+      "Текст видимого твита передаётся каждому включённому сервису. Бесплатные публичные сервисы включены по умолчанию.",
     cryptoDictionary: "Словарь защищённых криптотерминов",
     cryptoDictionarySummary: "Криптословарь",
     terms: "терминов",
@@ -48,16 +50,18 @@ const translations = {
     platforms: "Translate on",
     targetLanguage: "Tweet translation language",
     targetLanguageHelp: "Tweet text will be translated into this language.",
-    primaryTranslation: "Primary translation",
     googleFreeProvider: "Google Translate — free",
-    googleNotice:
-      "Google is always tried first. A fallback starts only after Google's final failure.",
-    fallbackTranslation: "Fallback translation",
-    myMemoryFallback: "Use MyMemory",
+    myMemoryProvider: "MyMemory",
+    libreTranslateProvider: "LibreTranslate / Argos",
+    lingvaProvider: "Lingva Translate",
+    apertiumProvider: "Apertium",
+    translationServices: "Translation services",
+    parallelTranslationHelp:
+      "Requests are sent to all selected services at once. The first usable result wins and the remaining requests are cancelled.",
     proxyFallback: "Use a custom server",
     proxyUrl: "Translation server address",
-    fallbackPrivacy:
-      "Visible tweet text is sent only to enabled services and strictly in sequence. Fallback services are disabled by default.",
+    providerPrivacy:
+      "Visible tweet text is sent to every enabled service. Free public services are enabled by default.",
     cryptoDictionary: "Protected crypto-term dictionary",
     cryptoDictionarySummary: "Crypto dictionary",
     terms: "terms",

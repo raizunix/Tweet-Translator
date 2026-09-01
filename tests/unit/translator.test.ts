@@ -27,7 +27,7 @@ describe("Translator", () => {
     expect(translate).toHaveBeenCalledTimes(2);
   });
   it("evicts the least recently used successful result", async () => {
-    const translate = vi.fn(async ({ text }: { text: string }) => ({ text }));
+    const translate = vi.fn(async ({ text }: { text: string }) => ({ text: `translated:${text}` }));
     const translator = new Translator(
       { id: "test", translate } as TranslationProvider,
       1_000,
@@ -50,5 +50,27 @@ describe("Translator", () => {
     await expect(translator.translate("hello")).rejects.toThrow("offline");
     await expect(translator.translate("hello")).resolves.toEqual({ text: "ok" });
     expect(translate).toHaveBeenCalledTimes(2);
+  });
+  it("bypasses a successful cached result when forced", async () => {
+    const translate = vi
+      .fn()
+      .mockResolvedValueOnce({ text: "первый" })
+      .mockResolvedValueOnce({ text: "второй" });
+    const translator = new Translator({ id: "test", translate } as TranslationProvider);
+    await expect(translator.translate("hello")).resolves.toEqual({ text: "первый" });
+    await expect(translator.translate("hello", "ru", true)).resolves.toEqual({ text: "второй" });
+    expect(translate).toHaveBeenCalledTimes(2);
+  });
+  it("does not accept source text produced after protected-text restoration", async () => {
+    const translate = vi.fn(async () => ({ text: "Translated without its marker" }));
+    const translator = new Translator(
+      { id: "test", translate } as TranslationProvider,
+      1_000,
+      0,
+      200,
+      ["Bitcoin"]
+    );
+
+    await expect(translator.translate("Buy Bitcoin now")).rejects.toThrow("Could not translate");
   });
 });

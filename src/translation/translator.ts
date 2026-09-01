@@ -1,5 +1,6 @@
 import type { TranslationProvider, TranslationResult } from "./types";
 import { protectText } from "./text-protection";
+import { normalizeComparableText } from "./result-validation";
 
 const message = (key: string, fallback: string) =>
   globalThis.chrome?.i18n?.getMessage(key) || fallback;
@@ -26,16 +27,16 @@ export class Translator {
     private readonly cryptoTerms: readonly string[] | undefined = undefined
   ) {}
 
-  translate(text: string, targetLanguage = "ru"): Promise<TranslationResult> {
+  translate(text: string, targetLanguage = "ru", force = false): Promise<TranslationResult> {
     const normalized = normalizeText(text);
     const key = `${this.provider.id ?? "anonymous"}:${targetLanguage}:${normalized}`;
-    const cached = this.cache.get(key);
+    const cached = force ? undefined : this.cache.get(key);
     if (cached) {
       this.cache.delete(key);
       this.cache.set(key, cached);
       return Promise.resolve(cached);
     }
-    const existing = this.pending.get(key);
+    const existing = force ? undefined : this.pending.get(key);
     if (existing) return existing;
     const promise = this.run(normalized, targetLanguage)
       .then((result) => {
@@ -68,7 +69,15 @@ export class Translator {
           { text: protectedText.text, targetLanguage },
           controller.signal
         );
-        return { ...result, text: protectedText.restore(result.text) };
+        const restored = protectedText.restore(result.text);
+        if (
+          normalizeComparableText(restored) === normalizeComparableText(text) &&
+          result.detectedLanguage?.toLowerCase().split("-")[0] !==
+            targetLanguage.toLowerCase().split("-")[0]
+        ) {
+          throw new Error(message("translationFailed", "Could not translate"));
+        }
+        return { ...result, text: restored };
       } catch (error) {
         lastError = error;
         if (attempt < this.retries)

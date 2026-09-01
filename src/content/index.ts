@@ -18,8 +18,14 @@ async function loadContentSettings(): Promise<Settings> {
     platforms: { axiom: true, gmgn: true, padre: true },
     interfaceLanguage: "auto",
     targetLanguage: "ru",
-    provider: "google-free",
-    fallbacks: { myMemory: false, proxy: false },
+    providers: {
+      google: true,
+      myMemory: true,
+      libreTranslate: true,
+      lingva: true,
+      apertium: true,
+      proxy: false
+    },
     proxyUrl: "",
     cryptoTerms: DEFAULT_CRYPTO_TERMS,
     cryptoDictionaryVersion: 2
@@ -30,11 +36,7 @@ async function loadContentSettings(): Promise<Settings> {
     ...defaults,
     ...raw,
     platforms: { ...defaults.platforms, ...raw?.platforms },
-    fallbacks: {
-      ...defaults.fallbacks,
-      ...raw?.fallbacks,
-      ...(raw?.provider === "proxy" ? { proxy: true } : {})
-    },
+    providers: { ...defaults.providers, ...raw?.providers },
     cryptoTerms:
       raw?.cryptoDictionaryVersion === defaults.cryptoDictionaryVersion &&
       Array.isArray(raw?.cryptoTerms)
@@ -45,8 +47,7 @@ async function loadContentSettings(): Promise<Settings> {
               ...(Array.isArray(raw?.cryptoTerms) ? raw.cryptoTerms : [])
             ])
           ],
-    cryptoDictionaryVersion: defaults.cryptoDictionaryVersion,
-    provider: "google-free"
+    cryptoDictionaryVersion: defaults.cryptoDictionaryVersion
   };
   return settings;
 }
@@ -63,7 +64,7 @@ void (async () => {
   const adapter = adapterFor(new URL(location.href));
   if (!settings.enabled || !adapter || !settings.platforms[adapter.id]) return;
   const provider = createTranslationProvider(settings);
-  const translator = new Translator(provider, 8_000, 0, 200, settings.cryptoTerms);
+  const translator = new Translator(provider, 12_000, 1, 200, settings.cryptoTerms);
   let anchor: HTMLElement | null = null;
   let anchorUrl: string | undefined;
   let anchorCenter: { x: number; y: number } | undefined;
@@ -122,15 +123,19 @@ void (async () => {
     guardCombinedHover(match.popup, match.content, overlay.host);
     overlay.loading();
     followPopupLifecycle(match.popup);
-    const execute = async () => {
+    const execute = async (force = false) => {
+      overlay?.loading();
       try {
         const results = await Promise.all(
           match.translationTargets.map((target) =>
-            translator.translate(target.text, settings.targetLanguage)
+            translator.translate(target.text, settings.targetLanguage, force)
           )
         );
         if (current === generation && overlay) {
-          overlay.success(results.map((result) => result.text));
+          overlay.success(
+            results.map((result) => result.text),
+            () => void execute(true)
+          );
         }
       } catch (error) {
         if (current === generation && overlay)
@@ -138,7 +143,7 @@ void (async () => {
             error instanceof Error
               ? error.message
               : message("translationFailed", "Could not translate"),
-            execute
+            () => void execute(true)
           );
       }
     };

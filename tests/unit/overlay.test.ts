@@ -159,6 +159,30 @@ Second paragraph
     overlay.destroy();
   });
 
+  it("retries a successful translation from the small reload button", () => {
+    document.body.innerHTML = `<div id="popup"><div><span>Text</span></div></div>`;
+    const popup = document.querySelector("#popup") as HTMLElement;
+    const content = popup.firstElementChild as HTMLElement;
+    vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(rect(100, 50, 300, 470));
+    vi.spyOn(content, "getBoundingClientRect").mockReturnValue(rect(100, 50, 300, 470));
+    const retry = vi.fn();
+    const overlay = new TranslationOverlay("ru");
+    overlay.place({
+      popup,
+      content,
+      translationTargets: [{ path: [0], text: "Text" }]
+    });
+    overlay.success(["Текст"], retry);
+
+    const reload = overlay.host.querySelector(
+      'button[data-tweet-translator="reload"]'
+    ) as HTMLButtonElement;
+    expect(reload.title).toBe("Повторить");
+    expect(reload.disabled).toBe(false);
+    reload.click();
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it("bridges the pointer gap between original and translated cards", () => {
     document.body.innerHTML = `
       <div id="popup"><div><span>Text</span></div></div>`;

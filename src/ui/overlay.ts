@@ -29,6 +29,7 @@ export class TranslationOverlay {
   private targetLinks: Array<Array<{ text: string; href: string }>> = [];
   private retryButton?: HTMLButtonElement;
   private copyButton?: HTMLButtonElement;
+  private reloadButton?: HTMLButtonElement;
   private hoverBridge?: HTMLElement;
   private translatedTexts: string[] = [];
   private sourceContent?: HTMLElement;
@@ -51,7 +52,12 @@ export class TranslationOverlay {
     this.host.addEventListener(
       "click",
       (event) => {
-        if (event.target === this.retryButton || event.target === this.copyButton) return;
+        if (
+          event.target === this.retryButton ||
+          event.target === this.copyButton ||
+          event.target === this.reloadButton
+        )
+          return;
         event.preventDefault();
         event.stopPropagation();
       },
@@ -96,14 +102,16 @@ export class TranslationOverlay {
   loading(): void {
     this.translatedTexts = [];
     if (this.copyButton) this.copyButton.disabled = true;
+    if (this.reloadButton) this.reloadButton.disabled = true;
     this.bodies.forEach((_body, index) =>
       this.renderBody(index, overlayMessages[this.language].translating)
     );
   }
 
-  success(texts: string[]): void {
+  success(texts: string[], retry?: () => void): void {
     this.translatedTexts = texts.filter(Boolean);
     if (this.copyButton) this.copyButton.disabled = this.translatedTexts.length === 0;
+    this.setReloadHandler(retry);
     texts.forEach((text, index) => this.renderBody(index, text));
   }
 
@@ -111,6 +119,7 @@ export class TranslationOverlay {
     const body = this.bodies[0];
     if (!body) return;
     this.renderBody(0, message);
+    this.setReloadHandler(retry);
     body.style.color = "#ff9d9d";
     this.retryButton = document.createElement("button");
     this.retryButton.type = "button";
@@ -199,6 +208,17 @@ export class TranslationOverlay {
     });
     this.host.append(this.copyButton);
 
+    this.reloadButton = document.createElement("button");
+    this.reloadButton.type = "button";
+    this.reloadButton.disabled = true;
+    this.reloadButton.textContent = "↻";
+    this.reloadButton.title = overlayMessages[this.language].retry;
+    this.reloadButton.setAttribute("aria-label", overlayMessages[this.language].retry);
+    this.reloadButton.dataset.tweetTranslator = "reload";
+    this.reloadButton.style.cssText =
+      "position:absolute;right:8px;top:8px;z-index:2147483647;width:24px;height:24px;padding:0;border:1px solid #536779;border-radius:5px;background:#253341;color:#d7e5f0;box-shadow:0 1px 4px #0008;font:700 16px/22px system-ui,sans-serif;cursor:pointer";
+    this.host.append(this.reloadButton);
+
     this.hoverBridge = document.createElement("span");
     this.hoverBridge.dataset.tweetTranslator = "hover-bridge";
     this.hoverBridge.style.cssText =
@@ -238,6 +258,15 @@ export class TranslationOverlay {
     } catch {
       // Clipboard access may be blocked by browser or OS policy.
     }
+  }
+
+  private setReloadHandler(retry?: () => void): void {
+    if (!this.reloadButton) return;
+    const replacement = this.reloadButton.cloneNode(true) as HTMLButtonElement;
+    replacement.disabled = !retry;
+    if (retry) replacement.addEventListener("click", retry, { once: true });
+    this.reloadButton.replaceWith(replacement);
+    this.reloadButton = replacement;
   }
 
   private renderBody(index: number, text: string): void {

@@ -122,40 +122,46 @@ function App() {
           <small>{message("targetLanguageHelp")}</small>
         </label>
         <fieldset className="service-card">
-          <legend>{message("fallbackTranslation")}</legend>
-          <div className="primary-service">
-            <span>
-              <strong>{message("googleFreeProvider")}</strong>
-              <small>{message("primaryTranslation")}</small>
-            </span>
-            <span className="status-dot">1</span>
-          </div>
-          <p className="service-help">{message("googleNotice")}</p>
+          <legend>{message("translationServices")}</legend>
+          <p className="service-help">{message("parallelTranslationHelp")}</p>
           <div className="compact-grid">
+            {(
+              [
+                ["google", "googleFreeProvider"],
+                ["myMemory", "myMemoryProvider"],
+                ["libreTranslate", "libreTranslateProvider"],
+                ["lingva", "lingvaProvider"],
+                ["apertium", "apertiumProvider"]
+              ] as const
+            ).map(([provider, label]) => (
+              <label className="check-card" key={provider}>
+                <input
+                  type="checkbox"
+                  checked={settings.providers[provider]}
+                  onChange={(event) =>
+                    update("providers", {
+                      ...settings.providers,
+                      [provider]: event.target.checked
+                    })
+                  }
+                />{" "}
+                {message(label)}
+              </label>
+            ))}
             <label className="check-card">
               <input
                 type="checkbox"
-                checked={settings.fallbacks.myMemory}
+                checked={settings.providers.proxy}
                 onChange={(e) =>
-                  update("fallbacks", { ...settings.fallbacks, myMemory: e.target.checked })
-                }
-              />{" "}
-              {message("myMemoryFallback")}
-            </label>
-            <label className="check-card">
-              <input
-                type="checkbox"
-                checked={settings.fallbacks.proxy}
-                onChange={(e) =>
-                  update("fallbacks", { ...settings.fallbacks, proxy: e.target.checked })
+                  update("providers", { ...settings.providers, proxy: e.target.checked })
                 }
               />{" "}
               {message("proxyFallback")}
             </label>
           </div>
-          <small>{message("fallbackPrivacy")}</small>
+          <small>{message("providerPrivacy")}</small>
         </fieldset>
-        {settings.fallbacks.proxy && (
+        {settings.providers.proxy && (
           <label>
             {message("proxyUrl")}
             <input

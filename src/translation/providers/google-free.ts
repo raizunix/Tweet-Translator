@@ -19,10 +19,14 @@ export class GoogleFreeTranslationProvider implements TranslationProvider {
       throw new Error(message("reloadPage", "The extension was updated — reload the page"));
     }
     return await new Promise<TranslationResult>((resolve, reject) => {
-      const abort = () => reject(new DOMException("Aborted", "AbortError"));
+      const requestId = crypto.randomUUID();
+      const abort = () => {
+        runtime.sendMessage({ type: "TWEET_TRANSLATOR_CANCEL", requestId });
+        reject(new DOMException("Aborted", "AbortError"));
+      };
       signal.addEventListener("abort", abort, { once: true });
       runtime.sendMessage(
-        { type: "TWEET_TRANSLATOR_GOOGLE_TRANSLATE", request },
+        { type: "TWEET_TRANSLATOR_GOOGLE_TRANSLATE", request, requestId },
         (response: GoogleTranslateResponse | undefined) => {
           signal.removeEventListener("abort", abort);
           if (signal.aborted) return;

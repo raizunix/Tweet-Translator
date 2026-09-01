@@ -29,10 +29,14 @@ async function send(request: TranslationRequest, signal: AbortSignal): Promise<T
   if (!runtime?.id || typeof runtime.sendMessage !== "function")
     throw new Error("Could not connect to MyMemory");
   return await new Promise((resolve, reject) => {
-    const abort = () => reject(new DOMException("Aborted", "AbortError"));
+    const requestId = crypto.randomUUID();
+    const abort = () => {
+      runtime.sendMessage({ type: "TWEET_TRANSLATOR_CANCEL", requestId });
+      reject(new DOMException("Aborted", "AbortError"));
+    };
     signal.addEventListener("abort", abort, { once: true });
     runtime.sendMessage(
-      { type: "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE", request },
+      { type: "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE", request, requestId },
       (response: MyMemoryResponse | undefined) => {
         signal.removeEventListener("abort", abort);
         if (signal.aborted) return;

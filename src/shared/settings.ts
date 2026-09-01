@@ -3,11 +3,19 @@ export interface Settings {
   platforms: { axiom: boolean; gmgn: boolean; padre: boolean };
   interfaceLanguage: "auto" | "ru" | "en";
   targetLanguage: string;
-  provider: "google-free" | "proxy";
-  fallbacks: { myMemory: boolean; proxy: boolean };
+  providers: ProviderSettings;
   proxyUrl: string;
   cryptoTerms: string[];
   cryptoDictionaryVersion: number;
+}
+
+export interface ProviderSettings {
+  google: boolean;
+  myMemory: boolean;
+  libreTranslate: boolean;
+  lingva: boolean;
+  apertium: boolean;
+  proxy: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -15,8 +23,14 @@ export const DEFAULT_SETTINGS: Settings = {
   platforms: { axiom: true, gmgn: true, padre: true },
   interfaceLanguage: "auto",
   targetLanguage: "ru",
-  provider: "google-free",
-  fallbacks: { myMemory: false, proxy: false },
+  providers: {
+    google: true,
+    myMemory: true,
+    libreTranslate: true,
+    lingva: true,
+    apertium: true,
+    proxy: false
+  },
   proxyUrl: import.meta.env.VITE_TRANSLATION_PROXY_URL ?? "",
   cryptoTerms: [],
   cryptoDictionaryVersion: 2
@@ -30,12 +44,7 @@ export async function getSettings(): Promise<Settings> {
     ...DEFAULT_SETTINGS,
     ...raw,
     platforms: { ...DEFAULT_SETTINGS.platforms, ...(raw.platforms ?? {}) },
-    fallbacks: {
-      ...DEFAULT_SETTINGS.fallbacks,
-      ...(raw.fallbacks ?? {}),
-      // Old installations that selected proxy keep it enabled as a fallback.
-      ...(raw.provider === "proxy" ? { proxy: true } : {})
-    },
+    providers: migrateProviders(raw),
     cryptoTerms:
       raw.cryptoDictionaryVersion === DEFAULT_SETTINGS.cryptoDictionaryVersion &&
       Array.isArray(raw.cryptoTerms)
@@ -46,10 +55,20 @@ export async function getSettings(): Promise<Settings> {
               ...(Array.isArray(raw.cryptoTerms) ? raw.cryptoTerms : [])
             ])
           ],
-    cryptoDictionaryVersion: DEFAULT_SETTINGS.cryptoDictionaryVersion,
-    provider: "google-free"
+    cryptoDictionaryVersion: DEFAULT_SETTINGS.cryptoDictionaryVersion
   };
   return settings;
+}
+
+function migrateProviders(raw: Record<string, unknown>): ProviderSettings {
+  const saved = raw.providers as Partial<ProviderSettings> | undefined;
+  if (saved) return { ...DEFAULT_SETTINGS.providers, ...saved };
+  const legacy = raw.fallbacks as { myMemory?: boolean; proxy?: boolean } | undefined;
+  return {
+    ...DEFAULT_SETTINGS.providers,
+    myMemory: legacy?.myMemory ?? true,
+    proxy: legacy?.proxy === true || raw.provider === "proxy"
+  };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {

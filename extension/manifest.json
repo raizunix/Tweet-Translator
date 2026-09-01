@@ -12,7 +12,20 @@
     "https://*.gmgn.ai/*",
     "https://trade.padre.gg/*",
     "https://translate.googleapis.com/*",
-    "https://api.mymemory.translated.net/*"
+    "https://api.mymemory.translated.net/*",
+    "https://libretranslate.de/*",
+    "https://translate.mentality.rip/*",
+    "https://translate.api.skitzen.com/*",
+    "https://trans.zillyhuhn.com/*",
+    "https://libretranslate.pussthecat.org/*",
+    "https://lingva.ml/*",
+    "https://translate.plausibility.cloud/*",
+    "https://lingva.lunar.icu/*",
+    "https://translate.projectsegfau.lt/*",
+    "https://translate.dr460nf1r3.org/*",
+    "https://lingva.garudalinux.org/*",
+    "https://translate.jae.fi/*",
+    "https://beta.apertium.org/*"
   ],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [
