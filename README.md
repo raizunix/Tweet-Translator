@@ -6,6 +6,8 @@
 
 Расширение не совершает сделки, не подключается к кошельку и не читает пароли или cookies.
 
+<img width="617" height="465" alt="image" src="https://github.com/user-attachments/assets/4cd4e8b9-477a-44a9-a19f-a2ca6d0b7123" />
+
 ## Скачать и установить
 
 Собирать проект и устанавливать Node.js не нужно. Готовое расширение уже находится в папке [`extension`](extension):
