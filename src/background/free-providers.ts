@@ -1,6 +1,16 @@
 import type { TranslationRequest, TranslationResult } from "../translation/types";
 
-export type FreeProviderId = "libretranslate" | "lingva" | "apertium";
+export type FreeProviderId = "bing" | "tartu" | "libretranslate" | "lingva" | "apertium";
+
+interface BingAuth {
+  ig: string;
+  iid: string;
+  key: string;
+  token: string;
+  expiresAt: number;
+}
+
+let bingAuth: BingAuth | undefined;
 
 const LIBRE_TRANSLATE_INSTANCES = [
   "https://libretranslate.de",
@@ -25,9 +35,105 @@ export async function translateWithFreeProvider(
   request: TranslationRequest,
   signal: AbortSignal
 ): Promise<TranslationResult> {
+  if (provider === "bing") return translateWithBing(request, signal);
+  if (provider === "tartu") return translateWithTartu(request, signal);
   if (provider === "libretranslate") return translateWithLibreTranslate(request, signal);
   if (provider === "lingva") return translateWithLingva(request, signal);
   return translateWithApertium(request, signal);
+}
+
+async function translateWithBing(
+  request: TranslationRequest,
+  signal: AbortSignal,
+  retried = false
+): Promise<TranslationResult> {
+  const auth = await getBingAuth(signal, retried);
+  const url = new URL("https://www.bing.com/ttranslatev3");
+  url.search = new URLSearchParams({ isVertical: "1", IG: auth.ig, IID: auth.iid }).toString();
+  const body = new URLSearchParams({
+    fromLang: request.sourceLanguage ?? "auto-detect",
+    to: toBingCode(request.targetLanguage),
+    text: request.text,
+    token: auth.token,
+    key: auth.key
+  });
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      credentials: "omit",
+      signal,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    },
+    5_000
+  );
+  const data = (await response.json()) as Array<{
+    detectedLanguage?: { language?: string };
+    translations?: Array<{ text?: string }>;
+  }>;
+  const text = data[0]?.translations?.[0]?.text;
+  if (!response.ok || !text) {
+    if (!retried) {
+      bingAuth = undefined;
+      return translateWithBing(request, signal, true);
+    }
+    throw new Error(`Bing returned ${response.status}`);
+  }
+  return { text, detectedLanguage: data[0]?.detectedLanguage?.language };
+}
+
+async function getBingAuth(signal: AbortSignal, force: boolean): Promise<BingAuth> {
+  if (!force && bingAuth && bingAuth.expiresAt > Date.now() + 30_000) return bingAuth;
+  const response = await fetchWithTimeout(
+    "https://www.bing.com/translator",
+    { credentials: "omit", signal },
+    5_000
+  );
+  if (!response.ok) throw new Error(`Bing auth returned ${response.status}`);
+  const html = await response.text();
+  const ig = /IG:"([^"]+)"/.exec(html);
+  const iid = /data-iid="([^"]+)"/.exec(html);
+  const params =
+    /params_AbusePreventionHelper\s*=\s*\[\s*(\d+)\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*\]/.exec(html);
+  if (!ig || !params) throw new Error("Bing authentication parameters changed");
+  bingAuth = {
+    ig: ig[1],
+    iid: iid?.[1] ?? "translator.5028",
+    key: params[1],
+    token: params[2],
+    expiresAt: Date.now() + (Number(params[3]) || 3_600_000)
+  };
+  return bingAuth;
+}
+
+async function translateWithTartu(
+  request: TranslationRequest,
+  signal: AbortSignal
+): Promise<TranslationResult> {
+  const source = toTartuCode(request.sourceLanguage ?? "en");
+  const target = toTartuCode(request.targetLanguage);
+  const response = await fetchWithTimeout(
+    "https://api.tartunlp.ai/translation/v2",
+    {
+      method: "POST",
+      credentials: "omit",
+      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: request.text,
+        src: source,
+        tgt: target,
+        domain: "general",
+        application: "Tweet Translator"
+      })
+    },
+    6_000
+  );
+  const data = (await response.json()) as { result?: string | string[]; detail?: unknown };
+  const text = Array.isArray(data.result) ? data.result.join("") : data.result;
+  if (!response.ok || !text) throw new Error(`TartuNLP returned ${response.status}`);
+  return { text, detectedLanguage: request.sourceLanguage ?? "en" };
 }
 
 async function translateWithLibreTranslate(
@@ -113,15 +219,18 @@ async function raceInstances<T>(
   parentSignal.addEventListener("abort", abortAll, { once: true });
   try {
     const winner = await Promise.any(
-      instances.map(async (instance, index) => ({
-        index,
-        value: await withTimeout(
-          controllers[index],
-          2_500,
-          (signal) => request(instance, signal),
-          `${instance} timed out`
-        )
-      }))
+      instances.map(async (instance, index) => {
+        await waitWithSignal(index * 300, controllers[index].signal);
+        return {
+          index,
+          value: await withTimeout(
+            controllers[index],
+            2_500,
+            (signal) => request(instance, signal),
+            `${instance} timed out`
+          )
+        };
+      })
     );
     controllers.forEach((controller, index) => {
       if (index !== winner.index) controller.abort();
@@ -135,6 +244,22 @@ async function raceInstances<T>(
   } finally {
     parentSignal.removeEventListener("abort", abortAll);
   }
+}
+
+function waitWithSignal(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (delayMs <= 0) return Promise.resolve();
+  if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
 }
 
 async function fetchWithTimeout(
@@ -199,6 +324,37 @@ function toApertiumCode(language: string): string {
     ru: "rus",
     sv: "swe",
     tr: "tur",
+    uk: "ukr"
+  };
+  const base = language.toLowerCase().split("-")[0];
+  return codes[base] ?? base;
+}
+
+function toBingCode(language: string): string {
+  const normalized = language.toLowerCase();
+  if (["zh", "zh-cn", "zh-hans"].includes(normalized)) return "zh-Hans";
+  if (["zh-tw", "zh-hant"].includes(normalized)) return "zh-Hant";
+  return language;
+}
+
+function toTartuCode(language: string): string {
+  const codes: Record<string, string> = {
+    ar: "ara",
+    bg: "bul",
+    cs: "ces",
+    de: "ger",
+    en: "eng",
+    es: "spa",
+    et: "est",
+    fi: "fin",
+    fr: "fra",
+    it: "ita",
+    lv: "lav",
+    lt: "lit",
+    pl: "pol",
+    pt: "por",
+    ru: "rus",
+    sv: "swe",
     uk: "ukr"
   };
   const base = language.toLowerCase().split("-")[0];

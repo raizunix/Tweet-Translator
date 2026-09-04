@@ -81,13 +81,13 @@ export class Translator {
       } catch (error) {
         lastError = error;
         if (attempt < this.retries)
-          await new Promise((resolve) => setTimeout(resolve, 150 * 2 ** attempt));
+          await new Promise((resolve) => setTimeout(resolve, 350 * 3 ** attempt));
       } finally {
         clearTimeout(timer);
       }
     }
     if (lastError instanceof DOMException && lastError.name === "AbortError")
       throw new Error(message("translationTimeout", "Translation took too long"));
-    throw lastError;
+    throw new Error(message("translationFailed", "Could not translate"), { cause: lastError });
   }
 }

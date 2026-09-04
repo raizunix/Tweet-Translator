@@ -89,9 +89,10 @@ progress = scrollTop / (scrollHeight - clientHeight)
 ## Перевод
 
 Провайдеры создаются фабрикой `src/translation/provider-factory.ts` из карты настроек.
-`RacingTranslationProvider` запускает их одновременно, принимает первый непустой результат,
-не совпадающий с исходным текстом, и отменяет проигравшие запросы. Circuit breaker временно
-исключает сервис после серии ошибок. MyMemory вызывается сегментами не более 500 байт UTF-8.
+`RacingTranslationProvider` запускает hedged race: Google стартует сразу, остальные сервисы
+подключаются с короткими задержками. Первый пригодный результат выигрывает, проигравшие запросы
+отменяются. Circuit breaker использует нарастающий cooldown; если открыты все цепи, выполняется
+half-open probe сервиса с ближайшим окончанием cooldown вместо немедленной ошибки.
 
 `Translator` защищает структурные и криптографические фрагменты, дедуплицирует одновременные
 запросы и хранит успешные результаты в ограниченном LRU-кэше. Ключ включает идентификатор
@@ -108,6 +109,8 @@ progress = scrollTop / (scrollHeight - clientHeight)
 Доступны провайдеры:
 
 - `google-free` — запрос через background service worker к неофициальному Google endpoint;
+- `bing` — бесплатный Bing web translator с краткоживущими параметрами авторизации;
+- `tartu` — публичный нейронный API TartuNLP;
 - `mymemory` — публичный MyMemory API;
 - `libretranslate` — перебор публичных LibreTranslate/Argos-инстансов;
 - `lingva` — перебор публичных Lingva-инстансов;

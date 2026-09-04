@@ -18,6 +18,17 @@ describe("text protection", () => {
     );
   });
 
+  it("preserves the source line and paragraph breaks when a provider removes whitespace", () => {
+    const source = "First paragraph\n\nSecond paragraph\nThird line";
+    const protectedText = protectText(source, []);
+    const tokens = protectedText.text.match(/⟦TT\d+⟧/g)!;
+
+    expect(tokens).toHaveLength(2);
+    expect(
+      protectedText.restore(`Первый абзац ${tokens[0]} Второй абзац ${tokens[1]} Третья строка`)
+    ).toBe("Первый абзац\n\nВторой абзац\nТретья строка");
+  });
+
   it("returns the source if a provider loses a protected token", () => {
     const source = "Buy $SOL now";
     expect(protectText(source).restore("Купить сейчас")).toBe(source);

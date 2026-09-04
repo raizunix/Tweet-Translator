@@ -20,6 +20,8 @@ async function loadContentSettings(): Promise<Settings> {
     targetLanguage: "ru",
     providers: {
       google: true,
+      bing: true,
+      tartu: true,
       myMemory: true,
       libreTranslate: true,
       lingva: true,
@@ -64,7 +66,7 @@ void (async () => {
   const adapter = adapterFor(new URL(location.href));
   if (!settings.enabled || !adapter || !settings.platforms[adapter.id]) return;
   const provider = createTranslationProvider(settings);
-  const translator = new Translator(provider, 12_000, 1, 200, settings.cryptoTerms);
+  const translator = new Translator(provider, 12_000, 2, 200, settings.cryptoTerms);
   let anchor: HTMLElement | null = null;
   let anchorUrl: string | undefined;
   let anchorCenter: { x: number; y: number } | undefined;

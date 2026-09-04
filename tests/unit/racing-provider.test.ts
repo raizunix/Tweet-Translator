@@ -76,6 +76,8 @@ describe("racing translation provider", () => {
       { text: "hello", targetLanguage: "ru" },
       controller.signal
     );
+    await Promise.resolve();
+    await Promise.resolve();
     controller.abort();
 
     await expect(translation).rejects.toMatchObject({ name: "AbortError" });
@@ -83,13 +85,14 @@ describe("racing translation provider", () => {
   });
 
   it("counts a provider timeout as a circuit-breaker failure", async () => {
-    const hanging = provider(
-      "hanging",
-      (_request, signal) =>
+    const translate = vi.fn();
+    translate.mockImplementation(
+      (_request: unknown, signal: AbortSignal) =>
         new Promise((_resolve, reject) => {
           signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
         })
     );
+    const hanging = provider("hanging", translate as TranslationProvider["translate"]);
     const race = new RacingTranslationProvider([hanging], {
       providerTimeoutMs: 5,
       failureThreshold: 1,
@@ -101,6 +104,20 @@ describe("racing translation provider", () => {
     ).rejects.toThrow("hanging timed out");
     await expect(
       race.translate({ text: "Hello", targetLanguage: "ru" }, new AbortController().signal)
-    ).rejects.toThrow("No translation provider is currently available");
+    ).rejects.toThrow("hanging timed out");
+    expect(translate).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not start a hedged fallback when the primary wins quickly", async () => {
+    const fallback = vi.fn(async () => ({ text: "запасной" }));
+    const race = new RacingTranslationProvider([
+      provider("google-free", async () => ({ text: "основной" })),
+      provider("bing", fallback)
+    ]);
+
+    await expect(
+      race.translate({ text: "Hello", targetLanguage: "ru" }, new AbortController().signal)
+    ).resolves.toEqual({ text: "основной" });
+    expect(fallback).not.toHaveBeenCalled();
   });
 });

@@ -372,6 +372,7 @@ export interface ProtectedText {
 type Match = { start: number; end: number; value: string };
 
 const BUILTIN_PATTERNS = [
+  /\n+/gu,
   /https?:\/\/[^\s<>"']+/giu,
   /\b(?:t\.co|bit\.ly|tinyurl\.com|youtu\.be)\/[^\s<>"']+/giu,
   /@[A-Za-z_][A-Za-z0-9_]{0,14}/gu,
@@ -433,13 +434,16 @@ export function protectText(
     text: protectedValue,
     restore(translated: string) {
       const seen = new Set<number>();
-      const restored = translated.replace(/⟦\s*TT\s*(\d+)\s*⟧/giu, (token, rawIndex: string) => {
-        const index = Number(rawIndex);
-        const value = values[index];
-        if (value === undefined || seen.has(index)) return token;
-        seen.add(index);
-        return value;
-      });
+      const restored = translated.replace(
+        /([^\S\r\n]*)⟦\s*TT\s*(\d+)\s*⟧([^\S\r\n]*)/giu,
+        (token, before: string, rawIndex: string, after: string) => {
+          const index = Number(rawIndex);
+          const value = values[index];
+          if (value === undefined || seen.has(index)) return token;
+          seen.add(index);
+          return value.includes("\n") ? value : `${before}${value}${after}`;
+        }
+      );
       // A missing marker means the service corrupted the structure. Returning
       // the source is safer than silently moving protected values elsewhere.
       return seen.size === values.length ? restored : source;

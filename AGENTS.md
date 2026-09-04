@@ -11,8 +11,8 @@ Read this file first. Open only the files relevant to the task.
 deduplication, retry bypass, and LRU cache.
 
 `src/translation/provider-factory.ts` builds enabled providers from `Settings`.
-`src/translation/providers/racing.ts` starts them concurrently, rejects unchanged source text,
-and aborts losers after the first usable result.
+`src/translation/providers/racing.ts` runs a hedged race, rejects unchanged source text, aborts
+losers after the first usable result, and performs a recovery probe when every circuit is open.
 
 Cloud calls go through the MV3 service worker in `src/background/index.ts` so host permissions
 and real fetch cancellation work. Public mirror lists and response parsing live in
@@ -31,12 +31,15 @@ The React options UI is `src/options/index.tsx`; text is in `src/options/message
 ## Providers
 
 - Google: `providers/google-free.ts` → background Google handler.
+- Bing and TartuNLP: generic `providers/runtime.ts` → `free-providers.ts`.
 - MyMemory: `providers/mymemory.ts` → background MyMemory handler.
 - LibreTranslate, Lingva, Apertium: generic `providers/runtime.ts` → `free-providers.ts`.
 - Custom user server: `providers/proxy.ts`.
 
 All public providers are optional and enabled by default. Public mirrors are unreliable; failure
 must never block another provider from winning the race.
+
+Reliability rationale and external comparisons are in `docs/RELIABILITY_AUDIT.md`.
 
 ## Verification
 

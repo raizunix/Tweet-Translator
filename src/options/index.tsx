@@ -128,6 +128,8 @@ function App() {
             {(
               [
                 ["google", "googleFreeProvider"],
+                ["bing", "bingProvider"],
+                ["tartu", "tartuProvider"],
                 ["myMemory", "myMemoryProvider"],
                 ["libreTranslate", "libreTranslateProvider"],
                 ["lingva", "lingvaProvider"],

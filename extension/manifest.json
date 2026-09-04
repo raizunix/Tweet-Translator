@@ -13,6 +13,8 @@
     "https://trade.padre.gg/*",
     "https://translate.googleapis.com/*",
     "https://api.mymemory.translated.net/*",
+    "https://www.bing.com/*",
+    "https://api.tartunlp.ai/*",
     "https://libretranslate.de/*",
     "https://translate.mentality.rip/*",
     "https://translate.api.skitzen.com/*",

@@ -64,7 +64,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   if (message.type === "TWEET_TRANSLATOR_TRANSLATE") {
     if (
       !("provider" in message) ||
-      !["libretranslate", "lingva", "apertium"].includes(String(message.provider))
+      !["bing", "tartu", "libretranslate", "lingva", "apertium"].includes(String(message.provider))
     ) {
       activeRequests.delete(requestId);
       sendResponse({ ok: false, error: "Unknown translation provider" });

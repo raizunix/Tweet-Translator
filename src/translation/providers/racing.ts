@@ -10,6 +10,17 @@ export interface CircuitBreakerOptions {
 
 type State = { failures: number; openUntil: number };
 
+const HEDGE_DELAYS_MS: Record<string, number> = {
+  proxy: 0,
+  "google-free": 0,
+  bing: 120,
+  tartu: 240,
+  mymemory: 360,
+  libretranslate: 650,
+  lingva: 800,
+  apertium: 950
+};
+
 export class RacingTranslationProvider implements TranslationProvider {
   readonly id: string;
   private readonly states = new Map<TranslationProvider, State>();
@@ -26,16 +37,24 @@ export class RacingTranslationProvider implements TranslationProvider {
     this.failureThreshold = options.failureThreshold ?? 3;
     this.resetAfterMs = options.resetAfterMs ?? 60_000;
     this.now = options.now ?? Date.now;
-    this.providerTimeoutMs = options.providerTimeoutMs ?? 5_000;
+    this.providerTimeoutMs = options.providerTimeoutMs ?? 8_000;
     this.id = providers.map((provider, index) => provider.id ?? `provider-${index}`).join("|");
   }
 
   async translate(request: TranslationRequest, signal: AbortSignal): Promise<TranslationResult> {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-    const available = this.providers.filter(
+    let available = this.providers.filter(
       (provider) => this.stateFor(provider).openUntil <= this.now()
     );
-    if (!available.length) throw new Error("No translation provider is currently available");
+    let recoveryProbe = false;
+    if (!available.length) {
+      recoveryProbe = true;
+      available = [
+        [...this.providers].sort(
+          (left, right) => this.stateFor(left).openUntil - this.stateFor(right).openUntil
+        )[0]
+      ];
+    }
 
     const controllers = available.map(() => new AbortController());
     const abortAll = () => controllers.forEach((controller) => controller.abort());
@@ -45,11 +64,17 @@ export class RacingTranslationProvider implements TranslationProvider {
         available.map(async (provider, index) => {
           const state = this.stateFor(provider);
           let providerTimedOut = false;
-          const timer = setTimeout(() => {
-            providerTimedOut = true;
-            controllers[index].abort();
-          }, this.providerTimeoutMs);
+          let timer: ReturnType<typeof setTimeout> | undefined;
           try {
+            await waitForHedge(
+              recoveryProbe ? 0 : (HEDGE_DELAYS_MS[provider.id ?? ""] ?? 0),
+              controllers[index].signal
+            );
+            if (controllers[index].signal.aborted) throw new DOMException("Aborted", "AbortError");
+            timer = setTimeout(() => {
+              providerTimedOut = true;
+              controllers[index].abort();
+            }, this.providerTimeoutMs);
             const result = await provider.translate(request, controllers[index].signal);
             if (!isUsefulTranslation(request, result)) {
               throw new Error(`${provider.id ?? "Translation provider"} returned the source text`);
@@ -61,13 +86,14 @@ export class RacingTranslationProvider implements TranslationProvider {
             if (providerTimedOut || !isAbortError(error)) {
               state.failures++;
               if (state.failures >= this.failureThreshold) {
-                state.openUntil = this.now() + this.resetAfterMs;
+                const exponent = Math.min(3, state.failures - this.failureThreshold);
+                state.openUntil = this.now() + this.resetAfterMs * 2 ** exponent;
               }
             }
             if (providerTimedOut) throw new Error(`${provider.id ?? "Provider"} timed out`);
             throw error;
           } finally {
-            clearTimeout(timer);
+            if (timer !== undefined) clearTimeout(timer);
           }
         })
       );
@@ -94,6 +120,22 @@ export class RacingTranslationProvider implements TranslationProvider {
     }
     return state;
   }
+}
+
+function waitForHedge(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (delayMs <= 0) return Promise.resolve();
+  if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
 }
 
 function isUsefulTranslation(request: TranslationRequest, result: TranslationResult): boolean {

@@ -11,6 +11,8 @@ export interface Settings {
 
 export interface ProviderSettings {
   google: boolean;
+  bing: boolean;
+  tartu: boolean;
   myMemory: boolean;
   libreTranslate: boolean;
   lingva: boolean;
@@ -25,6 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
   targetLanguage: "ru",
   providers: {
     google: true,
+    bing: true,
+    tartu: true,
     myMemory: true,
     libreTranslate: true,
     lingva: true,

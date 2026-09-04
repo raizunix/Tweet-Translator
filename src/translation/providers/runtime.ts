@@ -6,9 +6,10 @@ interface RuntimeResponse extends Partial<TranslationResult> {
 }
 
 export class RuntimeTranslationProvider implements TranslationProvider {
-  constructor(readonly id: "libretranslate" | "lingva" | "apertium") {}
+  constructor(readonly id: "bing" | "tartu" | "libretranslate" | "lingva" | "apertium") {}
 
   translate(request: TranslationRequest, signal: AbortSignal): Promise<TranslationResult> {
+    if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
     const runtime = globalThis.chrome?.runtime;
     if (!runtime?.id || typeof runtime.sendMessage !== "function")
       return Promise.reject(new Error(`Could not connect to ${this.id}`));

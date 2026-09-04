@@ -47,7 +47,7 @@ describe("Translator", () => {
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValue({ text: "ok" });
     const translator = new Translator({ id: "test", translate } as TranslationProvider, 1_000, 0);
-    await expect(translator.translate("hello")).rejects.toThrow("offline");
+    await expect(translator.translate("hello")).rejects.toThrow("Could not translate");
     await expect(translator.translate("hello")).resolves.toEqual({ text: "ok" });
     expect(translate).toHaveBeenCalledTimes(2);
   });

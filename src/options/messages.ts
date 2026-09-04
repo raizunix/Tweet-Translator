@@ -16,13 +16,15 @@ const translations = {
     targetLanguage: "Язык перевода твитов",
     targetLanguageHelp: "На этот язык переводится текст твитов.",
     googleFreeProvider: "Google Translate — бесплатно",
+    bingProvider: "Microsoft Bing — бесплатно",
+    tartuProvider: "TartuNLP — бесплатно",
     myMemoryProvider: "MyMemory",
     libreTranslateProvider: "LibreTranslate / Argos",
     lingvaProvider: "Lingva Translate",
     apertiumProvider: "Apertium",
     translationServices: "Сервисы перевода",
     parallelTranslationHelp:
-      "Запрос отправляется всем отмеченным сервисам одновременно. Используется первый пригодный ответ, остальные запросы отменяются.",
+      "Сервисы подключаются поэтапно с короткими задержками. Используется первый пригодный ответ, остальные запросы отменяются.",
     proxyFallback: "Использовать собственный сервер",
     proxyUrl: "Адрес сервера перевода",
     providerPrivacy:
@@ -51,13 +53,15 @@ const translations = {
     targetLanguage: "Tweet translation language",
     targetLanguageHelp: "Tweet text will be translated into this language.",
     googleFreeProvider: "Google Translate — free",
+    bingProvider: "Microsoft Bing — free",
+    tartuProvider: "TartuNLP — free",
     myMemoryProvider: "MyMemory",
     libreTranslateProvider: "LibreTranslate / Argos",
     lingvaProvider: "Lingva Translate",
     apertiumProvider: "Apertium",
     translationServices: "Translation services",
     parallelTranslationHelp:
-      "Requests are sent to all selected services at once. The first usable result wins and the remaining requests are cancelled.",
+      "Services join a hedged race after short delays. The first usable result wins and the remaining requests are cancelled.",
     proxyFallback: "Use a custom server",
     proxyUrl: "Translation server address",
     providerPrivacy:
