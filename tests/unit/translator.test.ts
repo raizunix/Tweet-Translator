@@ -61,8 +61,11 @@ describe("Translator", () => {
     await expect(translator.translate("hello", "ru", true)).resolves.toEqual({ text: "второй" });
     expect(translate).toHaveBeenCalledTimes(2);
   });
-  it("does not accept source text produced after protected-text restoration", async () => {
-    const translate = vi.fn(async () => ({ text: "Translated without its marker" }));
+  it("does not accept corrupted markers when the fragment fallback also fails", async () => {
+    const translate = vi
+      .fn()
+      .mockResolvedValueOnce({ text: "Translated without its marker" })
+      .mockRejectedValue(new Error("Fragment unavailable"));
     const translator = new Translator(
       { id: "test", translate } as TranslationProvider,
       1_000,

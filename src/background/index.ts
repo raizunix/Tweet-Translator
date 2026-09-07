@@ -1,164 +1,141 @@
+import { translateWithFreeProvider, type FreeProviderId } from "./free-providers";
+import { fetchJson, httpError } from "./http";
+import { requestScheduler } from "./request-scheduler";
+import { TranslationError } from "../translation/errors";
+import type { TranslationRequest, TranslationResult } from "../translation/types";
+
 chrome.runtime.onInstalled.addListener(() => {
   // Storage defaults are merged lazily to preserve forward-compatible settings.
 });
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
-const i18nMessage = (key: string, fallback: string, substitutions?: string) =>
-  chrome.i18n.getMessage(key, substitutions) || fallback;
-
 const activeRequests = new Map<string, AbortController>();
+const freeProviders = ["bing", "tartu", "libretranslate", "lingva", "apertium"];
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-  if (
-    message &&
-    typeof message === "object" &&
-    "type" in message &&
-    message.type === "TWEET_TRANSLATOR_CANCEL" &&
-    "requestId" in message &&
-    typeof message.requestId === "string"
-  ) {
-    activeRequests.get(message.requestId)?.abort();
-    activeRequests.delete(message.requestId);
-    return false;
-  }
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (
     !message ||
     typeof message !== "object" ||
     !("type" in message) ||
-    (message.type !== "TWEET_TRANSLATOR_GOOGLE_TRANSLATE" &&
-      message.type !== "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE" &&
-      message.type !== "TWEET_TRANSLATOR_TRANSLATE") ||
-    !("request" in message) ||
     !("requestId" in message) ||
     typeof message.requestId !== "string"
-  ) {
+  )
+    return false;
+  const key = [sender.tab?.id ?? "extension", sender.frameId ?? 0, message.requestId].join(":");
+  if (message.type === "TWEET_TRANSLATOR_CANCEL") {
+    activeRequests.get(key)?.abort();
     return false;
   }
-  const request = message.request as {
-    text?: unknown;
-    targetLanguage?: unknown;
-    sourceLanguage?: unknown;
-  };
-  const requestId = message.requestId;
   if (
+    ![
+      "TWEET_TRANSLATOR_GOOGLE_TRANSLATE",
+      "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE",
+      "TWEET_TRANSLATOR_TRANSLATE"
+    ].includes(String(message.type))
+  )
+    return false;
+  const request =
+    "request" in message ? (message.request as Partial<TranslationRequest> | null) : null;
+  if (
+    !request ||
     typeof request.text !== "string" ||
     !request.text.trim() ||
     request.text.length > 10_000 ||
-    typeof request.targetLanguage !== "string"
+    typeof request.targetLanguage !== "string" ||
+    !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(request.targetLanguage) ||
+    (request.sourceLanguage !== undefined &&
+      (typeof request.sourceLanguage !== "string" ||
+        !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(request.sourceLanguage)))
   ) {
+    sendResponse({ ok: false, error: "Invalid translation request", code: "invalid-request" });
+    return false;
+  }
+  const provider =
+    message.type === "TWEET_TRANSLATOR_GOOGLE_TRANSLATE"
+      ? "google"
+      : message.type === "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE"
+        ? "mymemory"
+        : "provider" in message
+          ? String(message.provider)
+          : "";
+  if (!["google", "mymemory", ...freeProviders].includes(provider) || activeRequests.has(key)) {
     sendResponse({
       ok: false,
-      error: i18nMessage("invalidTranslationText", "Invalid text to translate")
+      error: "Invalid provider or duplicate request",
+      code: "invalid-request"
     });
     return false;
   }
-  if (
-    message.type === "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE" &&
-    new TextEncoder().encode(request.text).length > 500
-  ) {
-    sendResponse({ ok: false, error: "MyMemory segments must not exceed 500 bytes" });
-    return false;
-  }
   const controller = new AbortController();
-  activeRequests.set(requestId, controller);
-  if (message.type === "TWEET_TRANSLATOR_TRANSLATE") {
-    if (
-      !("provider" in message) ||
-      !["bing", "tartu", "libretranslate", "lingva", "apertium"].includes(String(message.provider))
-    ) {
-      activeRequests.delete(requestId);
-      sendResponse({ ok: false, error: "Unknown translation provider" });
-      return false;
-    }
-    void translateWithFreeProvider(
-      message.provider as FreeProviderId,
-      request as { text: string; targetLanguage: string; sourceLanguage?: string },
-      controller.signal
-    )
-      .then((result) => sendResponse({ ok: true, ...result }))
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          sendResponse({
-            ok: false,
-            error: error instanceof Error ? error.message : "Translation error"
-          });
-      })
-      .finally(() => activeRequests.delete(requestId));
-    return true;
-  }
-  if (message.type === "TWEET_TRANSLATOR_MYMEMORY_TRANSLATE") {
-    const url = new URL("https://api.mymemory.translated.net/get");
-    url.search = new URLSearchParams({
-      q: request.text,
-      langpair: `${typeof request.sourceLanguage === "string" ? request.sourceLanguage : "en"}|${request.targetLanguage}`
-    }).toString();
-    void fetch(url, { credentials: "omit", signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`MyMemory is unavailable (${response.status})`);
-        const data = (await response.json()) as {
-          responseStatus?: number | string;
-          responseDetails?: string;
-          responseData?: { translatedText?: string; detectedLanguage?: string };
-        };
-        if (String(data.responseStatus ?? "200") !== "200" || !data.responseData?.translatedText)
-          throw new Error(data.responseDetails || "MyMemory returned an invalid response");
-        sendResponse({
-          ok: true,
-          text: decodeEntities(data.responseData.translatedText),
-          detectedLanguage: data.responseData.detectedLanguage
-        });
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          sendResponse({
-            ok: false,
-            error: error instanceof Error ? error.message : "MyMemory translation error"
-          });
-      })
-      .finally(() => activeRequests.delete(requestId));
-    return true;
-  }
+  activeRequests.set(key, controller);
+  const input = request as TranslationRequest;
+  const operation =
+    provider === "google"
+      ? translateGoogle(input, controller.signal)
+      : provider === "mymemory"
+        ? translateMyMemory(input, controller.signal)
+        : translateWithFreeProvider(provider as FreeProviderId, input, controller.signal);
+  void operation
+    .then((result) => sendResponse({ ok: true, ...result }))
+    .catch((error: unknown) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : "Translation error",
+        code: error instanceof TranslationError ? error.code : "network",
+        retryAfterMs: error instanceof TranslationError ? error.retryAfterMs : undefined
+      });
+    })
+    .finally(() => activeRequests.delete(key));
+  return true;
+});
+
+async function translateGoogle(
+  request: TranslationRequest,
+  signal: AbortSignal
+): Promise<TranslationResult> {
   const url = new URL("https://translate.googleapis.com/translate_a/single");
   url.search = new URLSearchParams({
     client: "gtx",
-    sl: "auto",
+    sl: request.sourceLanguage ?? "auto",
     tl: request.targetLanguage,
     dt: "t",
     q: request.text
   }).toString();
-  void fetch(url, { signal: controller.signal })
-    .then(async (response) => {
-      if (response.status === 429)
-        throw new Error(i18nMessage("googleRateLimit", "Google limited the request rate"));
-      if (!response.ok)
-        throw new Error(
-          i18nMessage(
-            "googleUnavailable",
-            `Google Translate is unavailable (${response.status})`,
-            String(response.status)
-          )
-        );
-      const data = (await response.json()) as [Array<[string]>, null, string?];
-      const text = data[0]?.map((part) => part[0]).join("");
-      if (!text)
-        throw new Error(i18nMessage("googleEmpty", "Google returned an empty translation"));
-      sendResponse({ ok: true, text, detectedLanguage: data[2] });
-    })
-    .catch((error: unknown) => {
-      if (!controller.signal.aborted)
-        sendResponse({
-          ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : i18nMessage("googleError", "Google Translate error")
-        });
-    })
-    .finally(() => activeRequests.delete(requestId));
-  return true;
-});
+  const data = await fetchJson<[Array<[string]>, null, string?]>(url, { signal });
+  const text = data[0]?.map((part) => part[0]).join("");
+  if (!text) throw new TranslationError("Google returned an empty translation", "invalid-result");
+  return { text, detectedLanguage: data[2] };
+}
 
-function decodeEntities(value: string): string {
+async function translateMyMemory(
+  request: TranslationRequest,
+  signal: AbortSignal
+): Promise<TranslationResult> {
+  if (new TextEncoder().encode(request.text).length > 500)
+    throw new TranslationError("MyMemory segments must not exceed 500 bytes", "invalid-request");
+  const url = new URL("https://api.mymemory.translated.net/get");
+  url.search = new URLSearchParams({
+    q: request.text,
+    langpair: (request.sourceLanguage ?? "autodetect") + "|" + request.targetLanguage
+  }).toString();
+  const data = await fetchJson<{
+    responseStatus?: number | string;
+    responseDetails?: string;
+    quotaFinished?: boolean;
+    responseData?: { translatedText?: string; detectedLanguage?: string };
+  }>(url, { signal });
+  const status = Number(data.responseStatus ?? 200);
+  if (data.quotaFinished || status === 429) {
+    requestScheduler.defer(url.origin, 60_000);
+    throw new TranslationError(
+      data.responseDetails || "MyMemory quota exhausted",
+      "rate-limit",
+      60_000
+    );
+  }
+  if (status !== 200) throw httpError(status);
+  if (!data.responseData?.translatedText)
+    throw new TranslationError("MyMemory returned an empty translation", "invalid-result");
   const entities: Record<string, string> = {
     "&amp;": "&",
     "&lt;": "<",
@@ -166,6 +143,11 @@ function decodeEntities(value: string): string {
     "&quot;": '"',
     "&#39;": "'"
   };
-  return value.replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => entities[entity] ?? entity);
+  return {
+    text: data.responseData.translatedText.replace(
+      /&(?:amp|lt|gt|quot|#39);/g,
+      (entity) => entities[entity] ?? entity
+    ),
+    detectedLanguage: data.responseData.detectedLanguage
+  };
 }
-import { translateWithFreeProvider, type FreeProviderId } from "./free-providers";

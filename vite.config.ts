@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { build, defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { copyFileSync, cpSync, mkdirSync } from "node:fs";
@@ -8,7 +8,23 @@ export default defineConfig({
     react(),
     {
       name: "extension-assets",
-      closeBundle() {
+      async closeBundle() {
+        // MV3 manifest content scripts are classic scripts. Shared runtime
+        // modules must be bundled into an IIFE, not emitted as ESM imports.
+        await build({
+          configFile: false,
+          publicDir: false,
+          build: {
+            outDir: "extension",
+            emptyOutDir: false,
+            lib: {
+              entry: resolve(__dirname, "src/content/index.ts"),
+              name: "TweetTranslator",
+              formats: ["iife"],
+              fileName: () => "content.js"
+            }
+          }
+        });
         mkdirSync("extension", { recursive: true });
         copyFileSync("manifest.json", "extension/manifest.json");
         cpSync("_locales", "extension/_locales", { recursive: true });

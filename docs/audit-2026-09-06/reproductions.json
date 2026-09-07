@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-09-06T15:18:50.565Z",
+  "findings": {
+    "assumedSourceLanguage": {
+      "sentSource": "eng",
+      "claimedDetection": "en"
+    },
+    "bodyCancellation": {
+      "parentAborted": true,
+      "fetchSignalAborted": false,
+      "acceptedAfterAbort": true
+    },
+    "invalidMirrorWins": {
+      "failed": true,
+      "mirrorsCalled": 1,
+      "validSecondMirrorSkipped": true
+    },
+    "protectedOnly": {
+      "input": "GM $SOL 🚀",
+      "result": "rejected although nothing needs translation"
+    },
+    "forceCache": {
+      "cachedText": "Старый перевод",
+      "staleRequestOverwroteForcedResult": true
+    },
+    "outputLanguage": {
+      "text": "Bonjour tout le monde"
+    }
+  }
+}

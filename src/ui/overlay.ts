@@ -27,7 +27,7 @@ export class TranslationOverlay {
   private bodies: HTMLElement[] = [];
   private preservedMedia: HTMLElement[][] = [];
   private targetLinks: Array<Array<{ text: string; href: string }>> = [];
-  private retryButton?: HTMLButtonElement;
+  private readonly retryButtons = new Set<HTMLButtonElement>();
   private copyButton?: HTMLButtonElement;
   private reloadButton?: HTMLButtonElement;
   private hoverBridge?: HTMLElement;
@@ -53,7 +53,7 @@ export class TranslationOverlay {
       "click",
       (event) => {
         if (
-          event.target === this.retryButton ||
+          this.retryButtons.has(event.target as HTMLButtonElement) ||
           event.target === this.copyButton ||
           event.target === this.reloadButton
         )
@@ -101,11 +101,7 @@ export class TranslationOverlay {
 
   loading(): void {
     this.translatedTexts = [];
-    if (this.copyButton) this.copyButton.disabled = true;
-    if (this.reloadButton) this.reloadButton.disabled = true;
-    this.bodies.forEach((_body, index) =>
-      this.renderBody(index, overlayMessages[this.language].translating)
-    );
+    this.bodies.forEach((_body, index) => this.loadingBlock(index));
   }
 
   success(texts: string[], retry?: () => void): void {
@@ -116,18 +112,42 @@ export class TranslationOverlay {
   }
 
   error(message: string, retry: () => void): void {
-    const body = this.bodies[0];
-    if (!body) return;
-    this.renderBody(0, message);
+    this.errorBlock(0, message, retry);
     this.setReloadHandler(retry);
+  }
+
+  loadingBlock(index: number): void {
+    this.translatedTexts[index] = "";
+    this.updateCopyButton();
+    this.setReloadHandler();
+    this.renderBody(index, overlayMessages[this.language].translating);
+  }
+
+  successBlock(index: number, text: string): void {
+    this.translatedTexts[index] = text;
+    this.updateCopyButton();
+    this.renderBody(index, text);
+  }
+
+  errorBlock(index: number, message: string, retry: () => void): void {
+    const body = this.bodies[index];
+    if (!body) return;
+    this.translatedTexts[index] = "";
+    this.updateCopyButton();
+    this.renderBody(index, message);
     body.style.color = "#ff9d9d";
-    this.retryButton = document.createElement("button");
-    this.retryButton.type = "button";
-    this.retryButton.textContent = overlayMessages[this.language].retry;
-    this.retryButton.style.cssText =
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.textContent = overlayMessages[this.language].retry;
+    retryButton.style.cssText =
       "display:block;margin-top:12px;padding:6px 10px;border:1px solid #425464;border-radius:7px;background:#253341;color:#fff;cursor:pointer";
-    this.retryButton.addEventListener("click", retry, { once: true });
-    body.append(this.retryButton);
+    retryButton.addEventListener("click", retry, { once: true });
+    this.retryButtons.add(retryButton);
+    body.append(retryButton);
+  }
+
+  private updateCopyButton(): void {
+    if (this.copyButton) this.copyButton.disabled = !this.translatedTexts.some(Boolean);
   }
 
   destroy(): void {
@@ -248,7 +268,7 @@ export class TranslationOverlay {
   private async copyTranslation(): Promise<void> {
     if (!this.copyButton || this.translatedTexts.length === 0) return;
     try {
-      await navigator.clipboard.writeText(this.translatedTexts.join("\n\n"));
+      await navigator.clipboard.writeText(this.translatedTexts.filter(Boolean).join("\n\n"));
       this.copyButton.textContent = overlayMessages[this.language].copied;
       setTimeout(() => {
         if (this.copyButton?.isConnected) {
@@ -260,7 +280,7 @@ export class TranslationOverlay {
     }
   }
 
-  private setReloadHandler(retry?: () => void): void {
+  setReloadHandler(retry?: () => void): void {
     if (!this.reloadButton) return;
     const replacement = this.reloadButton.cloneNode(true) as HTMLButtonElement;
     replacement.disabled = !retry;
@@ -272,6 +292,9 @@ export class TranslationOverlay {
   private renderBody(index: number, text: string): void {
     const body = this.bodies[index];
     if (!body) return;
+    for (const button of this.retryButtons) {
+      if (body.contains(button)) this.retryButtons.delete(button);
+    }
     body.style.removeProperty("color");
     body.style.whiteSpace = "pre-wrap";
     const media = (this.preservedMedia[index] ?? []).map((element) => element.cloneNode(true));

@@ -1,0 +1,251 @@
+{
+  "observedAt": "2026-09-06T15:19:34.193Z",
+  "results": [
+    {
+      "id": "google",
+      "input": "The team will release the update tomorrow.",
+      "ms": 504,
+      "error": "HTTP 429"
+    },
+    {
+      "id": "bing",
+      "input": "The team will release the update tomorrow.",
+      "ms": 3515,
+      "error": "Bing returned 401"
+    },
+    {
+      "id": "tartu",
+      "input": "The team will release the update tomorrow.",
+      "ms": 387,
+      "output": "Завтра группа опубликует обновленную информацию.",
+      "markersIntact": true
+    },
+    {
+      "id": "mymemory",
+      "input": "The team will release the update tomorrow.",
+      "ms": 944,
+      "output": "Завтра команда выпустит обновление.",
+      "markersIntact": true
+    },
+    {
+      "id": "libretranslate",
+      "input": "The team will release the update tomorrow.",
+      "ms": 1633,
+      "error": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "id": "lingva",
+      "input": "The team will release the update tomorrow.",
+      "ms": 2554,
+      "error": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "id": "apertium",
+      "input": "The team will release the update tomorrow.",
+      "ms": 3014,
+      "error": "Translation service timed out"
+    },
+    {
+      "id": "google",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 512,
+      "error": "HTTP 429"
+    },
+    {
+      "id": "bing",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 2553,
+      "error": "Bing returned 401"
+    },
+    {
+      "id": "tartu",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 335,
+      "output": "Завтра команда выпустит TT0.",
+      "markersIntact": false
+    },
+    {
+      "id": "mymemory",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 556,
+      "output": "⟧ Завтра команда выпустит ⟦TT0.",
+      "markersIntact": false
+    },
+    {
+      "id": "libretranslate",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 1416,
+      "error": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "id": "lingva",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 2696,
+      "error": "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "id": "apertium",
+      "input": "The team will release ⟦TT0⟧ tomorrow.",
+      "ms": 3015,
+      "error": "Translation service timed out"
+    }
+  ],
+  "responses": [
+    {
+      "origin": "https://translate.googleapis.com",
+      "status": 429
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 200
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 401
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 200
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 401
+    },
+    {
+      "origin": "https://api.tartunlp.ai",
+      "status": 200
+    },
+    {
+      "origin": "https://api.mymemory.translated.net",
+      "status": 200
+    },
+    {
+      "origin": "https://translate.mentality.rip",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://libretranslate.de",
+      "status": 403
+    },
+    {
+      "origin": "https://trans.zillyhuhn.com",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://libretranslate.pussthecat.org",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://translate.api.skitzen.com",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://lingva.ml",
+      "status": 403
+    },
+    {
+      "origin": "https://translate.dr460nf1r3.org",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://translate.projectsegfau.lt",
+      "status": 404
+    },
+    {
+      "origin": "https://lingva.garudalinux.org",
+      "status": 403
+    },
+    {
+      "origin": "https://translate.jae.fi",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://translate.plausibility.cloud",
+      "status": 500
+    },
+    {
+      "origin": "https://lingva.lunar.icu",
+      "status": 500
+    },
+    {
+      "origin": "https://beta.apertium.org",
+      "error": "This operation was aborted"
+    },
+    {
+      "origin": "https://translate.googleapis.com",
+      "status": 429
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 401
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 200
+    },
+    {
+      "origin": "https://www.bing.com",
+      "status": 401
+    },
+    {
+      "origin": "https://api.tartunlp.ai",
+      "status": 200
+    },
+    {
+      "origin": "https://api.mymemory.translated.net",
+      "status": 200
+    },
+    {
+      "origin": "https://translate.mentality.rip",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://libretranslate.de",
+      "status": 403
+    },
+    {
+      "origin": "https://translate.api.skitzen.com",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://trans.zillyhuhn.com",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://libretranslate.pussthecat.org",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://lingva.ml",
+      "status": 403
+    },
+    {
+      "origin": "https://translate.projectsegfau.lt",
+      "status": 404
+    },
+    {
+      "origin": "https://translate.dr460nf1r3.org",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://lingva.garudalinux.org",
+      "status": 403
+    },
+    {
+      "origin": "https://translate.jae.fi",
+      "error": "fetch failed"
+    },
+    {
+      "origin": "https://lingva.lunar.icu",
+      "status": 500
+    },
+    {
+      "origin": "https://translate.plausibility.cloud",
+      "status": 500
+    },
+    {
+      "origin": "https://beta.apertium.org",
+      "error": "This operation was aborted"
+    }
+  ]
+}

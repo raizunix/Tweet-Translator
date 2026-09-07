@@ -125,30 +125,42 @@ void (async () => {
     guardCombinedHover(match.popup, match.content, overlay.host);
     overlay.loading();
     followPopupLifecycle(match.popup);
-    const execute = async (force = false) => {
-      overlay?.loading();
-      try {
-        const results = await Promise.all(
-          match.translationTargets.map((target) =>
-            translator.translate(target.text, settings.targetLanguage, force)
-          )
-        );
-        if (current === generation && overlay) {
-          overlay.success(
-            results.map((result) => result.text),
-            () => void execute(true)
-          );
-        }
-      } catch (error) {
-        if (current === generation && overlay)
-          overlay.error(
-            error instanceof Error
-              ? error.message
-              : message("translationFailed", "Could not translate"),
-            () => void execute(true)
-          );
-      }
+    const indices = match.translationTargets.map((_target, index) => index);
+    const revisions = indices.map(() => 0);
+    const pending = new Set<number>();
+    const execute = async (selected = indices, force = false) => {
+      await Promise.all(
+        selected.map(async (index) => {
+          const revision = ++revisions[index];
+          pending.add(index);
+          if (current === generation) overlay?.loadingBlock(index);
+          try {
+            const result = await translator.translate(
+              match.translationTargets[index].text,
+              settings.targetLanguage,
+              force
+            );
+            if (current === generation && revisions[index] === revision)
+              overlay?.successBlock(index, result.text);
+          } catch (error) {
+            if (current === generation && revisions[index] === revision)
+              overlay?.errorBlock(
+                index,
+                error instanceof Error
+                  ? error.message
+                  : message("translationFailed", "Could not translate"),
+                () => void execute([index], true)
+              );
+          } finally {
+            if (revisions[index] === revision) pending.delete(index);
+            if (current === generation && !pending.size)
+              overlay?.setReloadHandler(() => void execute(indices, true));
+          }
+        })
+      );
     };
+    // Closing the popup only detaches its UI. The Translator keeps pending work
+    // for deduplication and populates the cache for the next hover.
     await execute();
   };
   function popupIsVisible(popup: HTMLElement) {

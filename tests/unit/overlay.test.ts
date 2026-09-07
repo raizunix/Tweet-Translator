@@ -26,6 +26,36 @@ describe("TranslationOverlay", () => {
     });
   });
 
+  it("shows and copies the successful block while a quote fails and retries independently", async () => {
+    document.body.innerHTML =
+      '<div id="popup"><div><p>Main tweet</p><blockquote>Quote</blockquote></div></div>';
+    const popup = document.querySelector("#popup") as HTMLElement;
+    vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(rect(100, 50, 300, 470));
+    const overlay = new TranslationOverlay();
+    overlay.place({
+      popup,
+      content: popup.firstElementChild as HTMLElement,
+      translationTargets: [
+        { path: [0], text: "Main tweet" },
+        { path: [1], text: "Quote" }
+      ]
+    });
+    overlay.loading();
+    overlay.successBlock(0, "Основной перевод");
+    const retry = vi.fn(() => overlay.loadingBlock(1));
+    overlay.errorBlock(1, "Quote failed", retry);
+    expect(overlay.host.querySelector("p")?.textContent).toBe("Основной перевод");
+    const buttons = Array.from(overlay.host.querySelectorAll("button"));
+    buttons.find((button) => button.textContent?.includes("Translation"))?.click();
+    await Promise.resolve();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Основной перевод");
+    buttons.find((button) => button.textContent === "Retry")?.click();
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(overlay.host.querySelector("p")?.textContent).toBe("Основной перевод");
+    overlay.successBlock(1, "Перевод цитаты");
+    expect(overlay.host.querySelector("blockquote")?.textContent).toBe("Перевод цитаты");
+  });
+
   it("clones the complete popup and only replaces the translation target", () => {
     document.body.innerHTML = `
       <div id="popup"><div class="visual-card" style="opacity:0;transform:translateY(4px)">

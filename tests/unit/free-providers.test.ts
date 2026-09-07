@@ -5,17 +5,24 @@ describe("background free providers", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("parses a TartuNLP translation", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ result: "Привет, мир." })
-    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ domains: [{ code: "general", languages: ["eng-rus"] }] })
+      })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ result: "Привет, мир." })
+      });
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
       translateWithFreeProvider(
         "tartu",
-        { text: "Hello world", targetLanguage: "ru" },
+        { text: "Hello world", targetLanguage: "ru", sourceLanguage: "en" },
         new AbortController().signal
       )
     ).resolves.toEqual({ text: "Привет, мир.", detectedLanguage: "en" });
